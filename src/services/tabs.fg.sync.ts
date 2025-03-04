@@ -9,10 +9,6 @@ import { SubPanelType } from 'src/types'
 export async function sync(ids: ID[]) {
   Logs.info('TabsSync.sync():', ids)
 
-  // Load sync service
-  if (!Sync.ready) await Sync.load()
-  else Sync.resetUnloadTimeout()
-
   // Prepare tabs for sync
   const favicons: Record<string, string> = {}
   const syncedTabs: Sync.Google.SyncedTabsBatch = {
@@ -45,7 +41,6 @@ export async function sync(ids: ID[]) {
 
     syncedTabs.tabs.push(sTab)
   }
-  Logs.info('TabsSync.sync(): syncedTabs', syncedTabs)
 
   // Save tabs
   await Sync.saveTabs(syncedTabs, favicons)
@@ -54,7 +49,7 @@ export async function sync(ids: ID[]) {
   const syncPanel = Sidebar.panelsById.sync
   const panelIsActive = syncPanel && Sidebar.activePanelId === syncPanel.id
   const subPanelIsActive = Sidebar.subPanelActive && Sidebar.subPanelType === SubPanelType.Sync
-  if (!panelIsActive && !subPanelIsActive) Sync.unloadAfter(30_000)
+  if (!panelIsActive && !subPanelIsActive) Sync.unloadAfter(5_000)
 }
 
 function getSyncedContainer(containerId: ID): Sync.Google.SyncedContainer | void {

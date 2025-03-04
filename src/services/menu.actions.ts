@@ -2,7 +2,7 @@ import * as Utils from 'src/utils'
 import { RGB_COLORS } from 'src/defaults'
 import { menuOptions } from './menu.options'
 import { Menu } from 'src/services/menu'
-import { Stored, ContextMenuConfig_v4, MenuConf } from 'src/types'
+import { Stored, MenuConf } from 'src/types'
 import { MenuBlock, MenuOption, MenuType, ContextMenuComponent, MenuConfs } from 'src/types'
 import { Settings } from 'src/services/settings'
 import { Selection } from 'src/services/selection'
@@ -37,24 +37,6 @@ export async function loadCtxMenu(): Promise<void> {
   setCtxMenu(storage.contextMenu)
 }
 
-export function upgradeMenuConf(oldConf: ContextMenuConfig_v4): MenuConf {
-  const conf: MenuConf = []
-  for (const oldOpt of oldConf) {
-    if (typeof oldOpt === 'string') {
-      conf.push(oldOpt)
-    } else {
-      let name = ''
-      const opts: string[] = []
-      oldOpt.forEach(opt => {
-        if (typeof opt === 'string') opts.push(opt)
-        else if (opt.name) name = opt.name
-      })
-      conf.push({ name, opts })
-    }
-  }
-  return conf
-}
-
 export function getCtxMenuConf() {
   const contextMenu: MenuConfs = {}
 
@@ -66,20 +48,14 @@ export function getCtxMenuConf() {
   return Utils.cloneObject(contextMenu)
 }
 
-export function saveCtxMenu(delay?: number): void {
-  Logs.info('Menu.saveCtxMenu')
+export async function saveCtxMenu(delay?: number) {
+  const storage: Stored = { contextMenu: getCtxMenuConf() }
+  await Store.set(storage, delay)
 
-  const storage: Stored = {
-    contextMenu: getCtxMenuConf(),
-  }
-  Store.set(storage, delay)
-
-  if (Settings.state.syncSaveCtxMenu) saveCtxMenuToSync()
+  if (Settings.state.syncSaveCtxMenu) await saveCtxMenuToSync()
 }
 
 export async function saveCtxMenuToSync(): Promise<void> {
-  Logs.info('Menu.saveCtxMenuToSync()')
-
   const contextMenu = getCtxMenuConf()
   await Sync.save(Sync.SyncedEntryType.CtxMenu, contextMenu)
 }
@@ -138,14 +114,14 @@ function onMenuHiddenBg(): void {
 }
 
 export function setCtxMenu(conf?: MenuConfs) {
-  if (!conf) return
-  if (conf?.tabs?.length) Menu.tabsConf = conf.tabs
+  if (!conf) conf = {}
+  if (conf.tabs?.length) Menu.tabsConf = conf.tabs
   else Menu.tabsConf = Utils.cloneArray(TABS_MENU)
-  if (conf?.tabsPanel?.length) Menu.tabsPanelConf = conf.tabsPanel
+  if (conf.tabsPanel?.length) Menu.tabsPanelConf = conf.tabsPanel
   else Menu.tabsPanelConf = Utils.cloneArray(TABS_PANEL_MENU)
-  if (conf?.bookmarks?.length) Menu.bookmarksConf = conf.bookmarks
+  if (conf.bookmarks?.length) Menu.bookmarksConf = conf.bookmarks
   else Menu.bookmarksConf = Utils.cloneArray(BOOKMARKS_MENU)
-  if (conf?.bookmarksPanel?.length) Menu.bookmarksPanelConf = conf.bookmarksPanel
+  if (conf.bookmarksPanel?.length) Menu.bookmarksPanelConf = conf.bookmarksPanel
   else Menu.bookmarksPanelConf = Utils.cloneArray(BOOKMARKS_PANEL_MENU)
 }
 

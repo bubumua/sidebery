@@ -9,15 +9,71 @@ section(ref="el")
     v-model:value="Settings.state.syncName"
     @update:value="onSyncNameUpdated")
   ToggleField(
-    label="Use Firefox Sync"
+    label="settings.sync_use_ff"
     v-model:value="Settings.state.syncUseFirefox"
     @update:value="onFFToggle"
     :note="translate('settings.sync_ff_note')")
   ToggleField(
-    label="Use Google Drive (experimental)"
+    label="settings.sync_use_gd"
     v-model:value="Settings.state.syncUseGoogleDrive"
+    :loading="gdToggling"
     @update:value="onGDToggle"
     :note="translate('settings.sync_gd_note')")
+  .sub-fields
+    ToggleField(
+      label="settings.sync_gd_api"
+      v-model:value="Settings.state.syncUseGoogleDriveApi"
+      :note="translate('settings.sync_gd_api_note')"
+      @update:value="Settings.saveDebounced(150)")
+    .sub-fields(v-if="Settings.state.syncUseGoogleDriveApi")
+      .note-field
+        .inline-box
+          .label {{translate('settings.sync_gd_api_proj')}}
+          a.link(href="https://developers.google.com/workspace/guides/create-project" target="_blank").
+            {{translate('settings.sync_gd_api_link')}}
+        .note.-wide {{translate('settings.sync_gd_api_proj_sub')}}
+      .note-field
+        .inline-box
+          .label {{translate('settings.sync_gd_api_drive')}}
+          a.link(href="https://console.cloud.google.com/flows/enableapi?apiid=drive.googleapis.com" target="_blank").
+            {{translate('settings.sync_gd_api_link')}}
+      .note-field
+        .inline-box
+          .label {{translate('settings.sync_gd_api_cli')}}
+          a.link(href="https://console.cloud.google.com/auth/clients" target="_blank").
+            {{translate('settings.sync_gd_api_link')}}
+        .note.-wide {{translate('settings.sync_gd_api_cli_sub')}}
+        code.note.-wide {{Google.getRedirectURI()}}
+      .note-field
+        .inline-box
+          .label {{translate('settings.sync_gd_api_id')}}
+          a.link(href="https://console.cloud.google.com/auth/clients" target="_blank").
+            {{translate('settings.sync_gd_api_link')}}
+      TextField(
+        label="settings.sync_gd_api_ins"
+        :or="'...'"
+        :line="true"
+        v-model:value="Settings.state.syncUseGoogleDriveApiClientId"
+        @update:value="Settings.saveDebounced(500)")
+      .note-field
+        .inline-box
+          .label {{translate('settings.sync_gd_api_scope')}}
+          a.link(href="https://console.cloud.google.com/auth/scopes" target="_blank").
+            {{translate('settings.sync_gd_api_link')}}
+        code.note.-wide https://www.googleapis.com/auth/drive.appdata
+      .note-field
+        .inline-box
+          .label {{translate('settings.sync_gd_api_usr')}}
+          a.link(href="https://console.cloud.google.com/auth/audience" target="_blank").
+            {{translate('settings.sync_gd_api_link')}}
+      .note-field
+        .inline-box
+          .label {{translate('settings.sync_gd_api_reload')}}
+          a.link(href="https://drive.google.com/drive/settings" target="_blank").
+            {{translate('settings.sync_gd_api_link')}}
+        .note {{translate('settings.sync_gd_api_reload_sub')}}
+      .note-field
+        .label {{translate('settings.sync_gd_api_done')}}
 
   ToggleField(
     label="settings.sync_save_settings"
@@ -37,7 +93,7 @@ section(ref="el")
     @update:value="onKbToggle()")
 
   .ctrls
-    .btn(@click="openSyncWin") View synced data
+    .btn(@click="openSyncWin") {{translate('settings.sync_view_btn')}}
 </template>
 
 <script lang="ts" setup>
@@ -50,9 +106,10 @@ import { SetupPage } from 'src/services/setup-page'
 import TextField from '../../components/text-field.vue'
 import ToggleField from '../../components/toggle-field.vue'
 import { Keybindings } from 'src/services/keybindings'
-import { Logs, Sync } from 'src/services/_services'
+import { Google, Logs, Sync } from 'src/services/_services'
 
 const el = ref<HTMLElement | null>(null)
+const gdToggling = ref(false)
 
 onMounted(() => {
   SetupPage.registerEl('settings_sync', el.value)
@@ -110,36 +167,35 @@ async function onFFToggle() {
 async function onGDToggle() {
   Logs.info('onGDToggle:', Settings.state.syncUseGoogleDrive)
 
+  gdToggling.value = true
+
   Settings.saveDebounced(150)
 
   // Save enabled fields of this profile
   if (Settings.state.syncUseGoogleDrive) {
-    // Save profile info
-    await Sync.Google.saveProfileInfo()
+    try {
+      // Save profile info
+      await Sync.Google.saveProfileInfo()
 
-    if (Settings.state.syncSaveCtxMenu) Menu.saveCtxMenuToSync()
-    if (Settings.state.syncSaveKeybindings) Keybindings.saveKeybindingsToSync()
-    if (Settings.state.syncSaveStyles) {
-      await Styles.loadCustomCSS()
-      Styles.saveStylesToSync()
+      if (Settings.state.syncSaveCtxMenu) Menu.saveCtxMenuToSync()
+      if (Settings.state.syncSaveKeybindings) Keybindings.saveKeybindingsToSync()
+      if (Settings.state.syncSaveStyles) {
+        await Styles.loadCustomCSS()
+        Styles.saveStylesToSync()
+      }
+    } catch (err) {
+      Logs.err('onGDToggle: turn on', err)
     }
   }
 
-  // Remove files created from this profile
-  else {
-    await Sync.Google.removeAllFilesOfThisProfile()
-    return
-  }
+  gdToggling.value = false
 }
 
 function onSettingsToggle(): void {
   Logs.info('onSettingsToggle:', Settings.state.syncSaveSettings)
 
   if (!Settings.state.syncSaveSettings) {
-    Sync.Firefox.remove('settings')
-    if (Settings.state.syncUseGoogleDrive) {
-      Sync.Google.remove(Sync.Google.FileType.Settings)
-    }
+    Sync.removeByType(Sync.SyncedEntryType.Settings)
   }
   Settings.saveDebounced(150)
 }
@@ -150,10 +206,7 @@ function onMenuToggle(): void {
   if (Settings.state.syncSaveCtxMenu) {
     Menu.saveCtxMenuToSync()
   } else {
-    Sync.Firefox.remove('ctxMenu')
-    if (Settings.state.syncUseGoogleDrive) {
-      Sync.Google.remove(Sync.Google.FileType.CtxMenu)
-    }
+    Sync.removeByType(Sync.SyncedEntryType.CtxMenu)
   }
   Settings.saveDebounced(150)
 }
@@ -165,10 +218,7 @@ async function onStylesToggle(): Promise<void> {
     await Styles.loadCustomCSS()
     Styles.saveStylesToSync()
   } else {
-    Sync.Firefox.remove('styles')
-    if (Settings.state.syncUseGoogleDrive) {
-      Sync.Google.remove(Sync.Google.FileType.Styles)
-    }
+    Sync.removeByType(Sync.SyncedEntryType.Styles)
   }
 
   Settings.saveDebounced(150)
@@ -180,10 +230,7 @@ function onKbToggle(): void {
   if (Settings.state.syncSaveKeybindings) {
     Keybindings.saveKeybindingsToSync()
   } else {
-    Sync.Firefox.remove('kb')
-    if (Settings.state.syncUseGoogleDrive) {
-      Sync.Google.remove(Sync.Google.FileType.Keybindings)
-    }
+    Sync.removeByType(Sync.SyncedEntryType.Keybindings)
   }
 
   Settings.saveDebounced(150)
@@ -192,6 +239,6 @@ function onKbToggle(): void {
 function openSyncWin() {
   Logs.info('settings.sync.vue: openSyncWin()')
 
-  Sync.openSyncWindow()
+  Sync.openSyncPopup()
 }
 </script>

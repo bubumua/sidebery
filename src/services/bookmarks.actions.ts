@@ -30,9 +30,31 @@ export async function load(): Promise<void> {
   if (!Info.isBg) return loadInFg()
 }
 
+let loading = false
+let onLoaded: (() => void)[] = []
+function finishLoading() {
+  loading = false
+  onLoaded.forEach(fn => fn())
+  onLoaded = []
+}
+
 async function loadInFg(): Promise<void> {
-  const bookmarks = (await browser.bookmarks.getTree()) as Bookmark[]
-  if (!bookmarks[0].children) return
+  // Check if the process is already started
+  if (loading) return new Promise(ok => onLoaded.push(ok))
+
+  loading = true
+
+  let bookmarks
+  try {
+    bookmarks = (await browser.bookmarks.getTree()) as Bookmark[]
+  } catch {
+    finishLoading()
+    return
+  }
+  if (!bookmarks[0].children) {
+    finishLoading()
+    return
+  }
 
   // Normalize objects before vue
   Bookmarks.reactive.byId = {}
@@ -77,6 +99,8 @@ async function loadInFg(): Promise<void> {
   if (DnD.reactive.isStarted && Utils.isBookmarksPanel(activePanel)) {
     Sidebar.updateBounds()
   }
+
+  finishLoading()
 }
 
 export async function restoreTree(): Promise<void> {
@@ -380,6 +404,8 @@ export async function open(
         if (isIndirectTarget) info.parentId = node.parentId
         if (!info.url && info.title && info.title.length > 20) {
           Bookmarks.extractTabInfoFromTitle(info, true)
+        } else {
+          Bookmarks.extractTabInfoFromTitle(info)
         }
 
         // Set url for parent node
@@ -407,8 +433,19 @@ export async function open(
   }
 
   if (ids.length === 1 && firstBookmark?.type === 'bookmark') {
+    const info: ItemInfo = {
+      id: firstBookmark.id,
+      url: firstBookmark.url,
+      title: firstBookmark.title,
+    }
+    Bookmarks.extractTabInfoFromTitle(info)
+
     if (useActiveTab) {
-      browser.tabs.update({ url: Utils.normalizeUrl(firstBookmark.url, firstBookmark.title) })
+      // TODO: undo
+      browser.tabs.update({ url: Utils.normalizeUrl(info.url, info.title) })
+      const activeTab = Tabs.byId[Tabs.activeId]
+      if (info.customColor) Tabs.setCustomColor([Tabs.activeId], info.customColor)
+      else if (activeTab && activeTab.customColor) Tabs.setCustomColor([Tabs.activeId], 'toolbar')
       if (Settings.state.autoRemoveOther && firstBookmark.parentId === BKM_OTHER_ID) {
         Bookmarks.removeBookmarks([firstBookmark.id])
       }
@@ -419,7 +456,7 @@ export async function open(
       toRemove.push(firstBookmark.id)
     }
 
-    toOpen.push({ id: firstBookmark.id, url: firstBookmark.url, title: firstBookmark.title })
+    toOpen.push(info)
   } else {
     walker(Bookmarks.reactive.tree)
   }
@@ -1496,4 +1533,22 @@ export async function prepareBookmarks() {
   }
   if (!Bookmarks.reactive.tree.length) await Bookmarks.load()
   return true
+}
+
+const flashAnimationTimeouts = new Map<ID, number>()
+
+export function triggerFlashAnimation(panelId: ID, bookmarkId: ID) {
+  const elId = 'bookmark' + panelId + bookmarkId
+  const el = document.getElementById(elId)
+  if (!el) return
+
+  el.classList.add('-middle-click')
+  clearTimeout(flashAnimationTimeouts.get(bookmarkId))
+  flashAnimationTimeouts.set(
+    bookmarkId,
+    setTimeout(() => {
+      el?.classList.remove('-middle-click')
+      flashAnimationTimeouts.delete(bookmarkId)
+    }, 300)
+  )
 }

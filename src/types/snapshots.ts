@@ -1,4 +1,4 @@
-import { SidebarConfig, OldPanelConfig } from './sidebar'
+import { SidebarConfig } from './sidebar'
 import { Container } from './containers'
 
 export const enum SnapStoreMode {
@@ -47,6 +47,7 @@ export interface SnapTab {
   panelId: ID
   lvl?: number
   pinned?: boolean
+  folded?: boolean
   containerId?: string
   customTitle?: string
   customColor?: string
@@ -80,35 +81,4 @@ export interface SnapExportInfo {
   jsonFile?: Blob
   md?: string
   mdFile?: Blob
-}
-
-// OLD STUFF //
-
-export interface Snapshot_v4 {
-  id?: ID
-  time?: number
-  containersById?: Record<ID, SnapContainerV4>
-  panels?: OldPanelConfig[]
-  windows?: Record<ID, SnapWinV4>
-}
-
-interface SnapContainerV4 {
-  id?: string
-  color?: browser.ColorName
-  icon?: string
-  name?: string
-}
-
-interface SnapWinV4 {
-  items?: SnapTabV4[]
-}
-
-interface SnapTabV4 {
-  id?: ID
-  url?: string
-  title?: string
-  panel?: ID
-  lvl?: number
-  ctr?: string
-  pinned?: boolean
 }

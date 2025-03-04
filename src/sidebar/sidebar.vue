@@ -22,6 +22,7 @@
   :data-search="!!Search.reactive.value"
   :data-sticky-bookmarks="Settings.state.pinOpenedBookmarksFolder"
   :data-colorized-branches="Settings.state.colorizeTabsBranches"
+  :data-syncing="Sync.reactive.syncing"
   @dragend="DnD.onDragEnd"
   @dragenter="DnD.onDragEnter"
   @dragleave="DnD.onDragLeave"
@@ -74,7 +75,8 @@
         .BottomBar(
           v-if="bottomBar && Utils.isTabsPanel(activePanel)"
           @dragover.prevent.stop=""
-          :data-drop-target-bookmarks="DnD.reactive.dstType === DropType.BookmarksSubPanelBtn && DnD.reactive.dstPanelId === activePanel.id")
+          :data-drop-target-bookmarks="DnD.reactive.dstType === DropType.BookmarksSubPanelBtn && DnD.reactive.dstPanelId === activePanel.id"
+          :data-drop-target-sync="DnD.reactive.dstType === DropType.SyncSubPanelBtn")
           .tool-btn(
             v-if="Settings.state.subPanelRecentlyClosedBar"
             :data-disabled="!Tabs.reactive.recentlyRemovedLen"
@@ -82,20 +84,19 @@
             svg: use(xlink:href="#icon_trash")
           .tool-btn.-bookmarks(
             v-if="Settings.state.subPanelBookmarks"
-            :data-disabled="!Utils.isTabsPanel(activePanel)"
             @dragleave="onBSPBDragLeave"
             @click="Sidebar.openSubPanel(SubPanelType.Bookmarks, activePanel)")
             .dnd-layer(data-dnd-type="bspb")
             svg: use(xlink:href="#icon_bookmarks")
           .tool-btn(
             v-if="Settings.state.subPanelHistory"
-            :data-disabled="!Utils.isTabsPanel(activePanel)"
             @click="Sidebar.openSubPanel(SubPanelType.History, activePanel)")
             svg: use(xlink:href="#icon_clock")
-          .tool-btn(
+          .tool-btn.-sync(
             v-if="Settings.state.subPanelSync"
-            :data-disabled="!Utils.isTabsPanel(activePanel)"
+            @dragleave="onSSPBDragLeave"
             @click="Sidebar.openSubPanel(SubPanelType.Sync, activePanel)")
+            .dnd-layer(data-dnd-type="sspb")
             svg: use(xlink:href="#icon_sync")
 
       SubPanel
@@ -103,8 +104,6 @@
     .right-vertical-box(v-if="pinnedTabsBarRight || navBarRight")
       PinnedTabsBar(v-if="pinnedTabsBarRight")
       NavigationBar.-vert(v-if="navBarRight")
-
-  UpgradeScreen(v-if="reactiveUpgrading.status")
 </template>
 
 <script lang="ts" setup>
@@ -124,7 +123,7 @@ import { Bookmarks } from 'src/services/bookmarks'
 import { Windows } from 'src/services/windows'
 import { Search } from 'src/services/search'
 import { SwitchingTabScope } from 'src/services/tabs.fg.actions'
-import { reactiveUpgrading } from 'src/services/upgrading'
+import { Sync } from 'src/services/_services'
 import ConfirmPopup from './components/popup.confirm.vue'
 import CtxMenuPopup from './components/popup.context-menu.vue'
 import DragAndDropTooltip from './components/dnd-tooltip.vue'
@@ -144,7 +143,6 @@ import GroupConfigPopup from './components/popup.group-config.vue'
 import DialogPopup from 'src/components/popup.dialog.vue'
 import NewTabShortcutsPopup from '../components/popup.new-tab-shortcuts.vue'
 import SiteConfigPopup from '../components/popup.site-config.vue'
-import UpgradeScreen from '../components/upgrade-screen.vue'
 import SubPanel from './components/sub-panel.vue'
 import * as Utils from 'src/utils'
 import * as Popups from 'src/services/popups'
@@ -370,10 +368,7 @@ function onMouseLeave(): void {
   }
 
   if (Sidebar.subPanelActive && !Search.rawValue && !Menu.isOpen && !DnD.items.length) {
-    clearTimeout(subPanelTimeout)
-    subPanelTimeout = setTimeout(() => {
-      Sidebar.closeSubPanel()
-    }, 300)
+    Sidebar.closeSubPanel()
   }
 
   if (Sidebar.switchOnMouseLeave) Sidebar.switchPanelOnMouseLeave()
@@ -447,10 +442,15 @@ function getPanelPos(i: number, panelId: ID): PanelPosition {
 let onBSPBDragLeaveTimeout: number | undefined
 function onBSPBDragLeave() {
   if (Sidebar.subPanelActive) DnD.reactive.dstType = DropType.Bookmarks
+  else DnD.reactive.dstType = DropType.Nowhere
 
   clearTimeout(onBSPBDragLeaveTimeout)
   onBSPBDragLeaveTimeout = setTimeout(() => {
     if (Sidebar.subPanelActive) Sidebar.updateBounds()
   }, 120)
+}
+
+function onSSPBDragLeave() {
+  DnD.reactive.dstType = DropType.Nowhere
 }
 </script>

@@ -35,6 +35,7 @@ export interface Tab extends NativeTab {
   moving?: boolean
   preventAutoReopening?: boolean
   previewImg?: string
+  removing?: boolean
 
   reactive: ReactiveTabProps
   sessionData?: TabSessionData
@@ -201,6 +202,7 @@ export interface TabTreeData {
   tid?: ID
   ct?: string
   cc?: string
+  f?: 1
 }
 export type TabsTreeData = TabTreeData[]
 

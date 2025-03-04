@@ -26,6 +26,15 @@ export async function move(
     if (dst.windowId === NOID) return
   }
 
+  // Check if target panel exists
+  if (dst.panelId) {
+    const dstPanel = Sidebar.panelsById[dst.panelId]
+    if (!Utils.isTabsPanel(dstPanel)) {
+      Logs.warn('Tabs.move: wrong type of target panel:', Utils.clone(dstPanel))
+      return
+    }
+  }
+
   // Move tabs from another window to this window
   if (src.windowId !== undefined && src.windowId !== Windows.id) {
     const tabIds = tabsInfo.map(t => t.id)
@@ -55,10 +64,14 @@ export async function move(
 
   // Move tabs to new window
   if (dst.windowId === NEWID) {
+    // Moving all tabs of this window to the new one... what?
+    const allInWin = Tabs.list.length === tabsInfo.length
+    if (allInWin && tabsInfo.length > 1) return
+
     Tabs.detachTabs(tabsInfo.map(t => t.id))
     const info = Utils.cloneArray<ItemInfo>(tabsInfo)
     const conf = { incognito: dst.incognito, tabId: MOVEID }
-    info.forEach(t => (t.panelId = dst.panelId))
+    if (dst.panelId) info.forEach(t => (t.panelId = dst.panelId))
     IPC.bg('createWindowWithTabs', info, conf).finally(() => Tabs.detachingTabIds.clear())
     return
   }
@@ -82,7 +95,7 @@ export async function move(
   }
 
   // Gather tabs by type (pinned/normal), get initial info
-  const dstTab: Tab | undefined = Tabs.list[dst.index]
+  const dstTab = Tabs.list[dst.index] as Tab | undefined
   const dstParent = Tabs.byId[dst.parentId]
   const pinnedTabs: Tab[] = []
   const normalTabs: Tab[] = []
@@ -99,6 +112,7 @@ export async function move(
     tabs.push(tab)
   }
 
+  if (dstTab?.pinned && !dst.pinned) return
   if (!tabs.length) return
 
   // Switch panelId of pinned tabs and exclude them from general list

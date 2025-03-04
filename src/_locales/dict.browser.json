@@ -8,7 +8,7 @@
     "hu": "Böngészőlapok fanézetben, könyvjelzők és előzmények egy nagymértékben személyre szabható oldalsávon.",
     "pl": "Drzewo kart, zakładki i historia w bogato konfiguralnym panelu bocznym.",
     "ru": "Древовидные вкладки, закладки и история на настраиваемой боковой панели.",
-    "zh_CN": "高度可配置的侧边栏中的选项卡、书签和历史记录的树结构。",
+    "zh_CN": "标签页树、书签和历史记录在高度可配置的侧边栏中。",
     "zh_TW": "具有分頁樹、書籤和歷史紀錄功能的高自訂性側邊欄。",
     "ja": "高度にカスタマイズ可能なサイドバー内のタブツリー、ブックマーク、履歴。"
   },
@@ -82,6 +82,36 @@
     "zh_CN": "打开菜单",
     "zh_TW": "開啟選單",
     "ja": "選択した（またはアクティブな）タブ、ブックマーク、またはパネル用のオープンメニュー"
+  },
+  "KbOpenPanelConfig": {
+    "en": "Open panel config",
+    "de": "Panel-Einstellungen öffnen",
+    "zh_CN": "打开面板配置",
+    "zh_TW": "開啟面板設定"
+  },
+  "KbCopyTitle": {
+    "en": "Copy titles of selected tabs/bookmarks or active tab",
+    "de": "Kopiere Titel der ausgewählten Tabs/Lesezeichen oder des aktiven Tabs",
+    "zh_CN": "复制选定标签页/书签或活动标签页的标题",
+    "zh_TW": "複製選定分頁/書籤或當前分頁的標題"
+  },
+  "KbCopyUrl": {
+    "en": "Copy URLs of selected tabs/bookmarks or active tab",
+    "de": "Kopiere URL(s) der ausgewählten Tabs/Lesezeichen oder des aktiven Tabs",
+    "zh_CN": "复制选定标签页/书签或活动标签页的网址",
+    "zh_TW": "複製選定分頁/書籤或當前分頁的網址"
+  },
+  "KbOpenBookmarksSubPanel": {
+    "en": "Open bookmarks sub-panel",
+    "de": "Öffne Lesezeichen Unter-Panel",
+    "zh_CN": "打开书签子面板",
+    "zh_TW": "開啟書籤子面板"
+  },
+  "KbOpenSyncPopup": {
+    "en": "Open sync popup",
+    "de": "Öffne Synchronisationsdialog",
+    "zh_CN": "打开同步弹出窗口",
+    "zh_TW": "彈出同步視窗"
   },
   "KbNextPanel": {
     "en": "Switch to next panel",
@@ -203,6 +233,12 @@
     "zh_TW": "切換到第十個面板",
     "ja": "10番目のパネルに切り替え"
   },
+  "KbSwitchToPrevPanel": {
+    "en": "Switch to previously active panel",
+    "de": "Zum zuletzt aktiven Panel wechseln",
+    "zh_CN": "切换到之前活动的面板",
+    "zh_TW": "切換到先前面板"
+  },
   "KbScrollToActivePanelTop": {
     "en": "Scroll to the top of the active panel",
     "de": "Zum Anfang des aktiven Panels scrollen",
@@ -225,7 +261,7 @@
   },
   "KbDuplicateTabs": {
     "en": "Duplicate selected (or active) tabs",
-    "de": "Ausgewählte (oder aktive) Tabs duplizieren",
+    "de": "Ausgewählte (oder aktiven) Tab(s) duplizieren",
     "hu": "A kijelölt (vagy aktív) panel megkettőzése",
     "pl": "Zduplikuj zaznaczone (lub aktywne) karty",
     "ru": "Дублировать выбранные (или активные) вкладки",
@@ -235,7 +271,7 @@
   },
   "KbPinTabs": {
     "en": "Pin/Unpin selected (or active) tabs",
-    "de": "Ausgewählte (oder aktive) Tabs anheften/lösen",
+    "de": "Ausgewählte (oder aktiven) Tab(s) anheften/lösen",
     "hu": "A kijelölt (vagy aktív) lapok rögzítése/feloldása",
     "pl": "Przypnij/Odepnij zaznaczone (lub aktywne) karty",
     "ru": "Закрепить/Открепить выбранные (или активные) вкладки",
@@ -245,21 +281,21 @@
   },
   "KbGroupTabs": {
     "en": "Group selected (or active) tabs",
-    "de": "Ausgewählte (oder aktive) Tabs gruppieren",
+    "de": "Ausgewählte (oder aktiven) Tab(s) gruppieren",
     "hu": "A kijelölt (vagy aktív) lapok csoportosítása",
     "pl": "Grupuj zaznaczone (lub aktywne) karty",
     "ru": "Сгруппировать выбранные (или активные) вкладки",
-    "zh_CN": "将选定（或活动）选项卡分配给组",
+    "zh_CN": "将选定（或活动）标签页分配给组",
     "zh_TW": "將選定（或當前）分頁分給群組",
     "ja": "選択した（またはアクティブな）タブをグループ化"
   },
   "KbGroupTabsAct": {
     "en": "Group selected (or active) tabs and switch to group page",
-    "de": "Ausgewählte (oder aktive) Tabs gruppieren und zur Gruppenseite wechseln",
+    "de": "Ausgewählte (oder aktiven) Tab(s) gruppieren und zur Gruppenseite wechseln",
     "hu": "A kijelölt (vagy aktív) lapok csoportosítása és ugrás a csoportoldalra",
     "pl": "Grupuj zaznaczone (lub aktywne) karty i przełącz na stronę grupy",
     "ru": "Сгруппировать выбранные (или активные) вкладки и переключится на групповую страницу",
-    "zh_CN": "将选定（或活动）选项卡分配给组并切换到分组页面",
+    "zh_CN": "将选定（或活动）标签页分配给组并切换到分组页面",
     "zh_TW": "將選定（或當前）分頁分給群組並切換到群組頁面",
     "ja": "選択した（またはアクティブな）タブをグループ化してグループページに切り替え"
   },
@@ -269,9 +305,15 @@
     "hu": "A kijelölt lapok szintcsökkentése",
     "pl": "Spłaszcz zaznaczone karty",
     "ru": "Сбросить вложенность выделенных вкладок",
-    "zh_CN": "树序列化（压平选定选项卡所在的树）",
+    "zh_CN": "树序列化（压平选定标签页所在的树）",
     "zh_TW": "樹序列化（壓平選定分頁所在的樹）",
     "ja": "選択したタブをフラット化"
+  },
+  "KbEditTitle": {
+    "en": "Edit title",
+    "de": "Titel bearbeiten",
+    "zh_CN": "编辑标题",
+    "zh_TW": "編輯標題"
   },
   "KbOpenNewTabInCurrPanel": {
     "en": "Open a new tab in the active panel",
@@ -289,7 +331,7 @@
     "hu": "Új lap az aktív lap után",
     "pl": "Otwórz nową kartę za aktywną kartą",
     "ru": "Открыть вкладку после активной вкладки",
-    "zh_CN": "在活动标签后打开新标签",
+    "zh_CN": "在活动标签页后打开新标签页",
     "zh_TW": "在當前分頁後開啟新分頁",
     "ja": "アクティブなタブの後に新しいタブを開く"
   },
@@ -299,7 +341,7 @@
     "hu": "Új lap az aktív lap első utódlapjaként",
     "pl": "Otwórz nową kartę jako pierwsze dziecko aktywnej karty",
     "ru": "Открыть дочернюю вкладку (в начале ветви)",
-    "zh_CN": "打开新标签页作为活动标签的第一个子标签",
+    "zh_CN": "打开新标签页作为活动标签页的第一个子标签页",
     "zh_TW": "開啟新分頁作為當前分頁的第一個子分頁",
     "ja": "アクティブなタブの最初の子として新しいタブを開く"
   },
@@ -309,7 +351,7 @@
     "hu": "Új lap az aktív lap utolsó utódlapjaként",
     "pl": "Otwórz nową kartę jako ostatnie dziecko aktywnej karty",
     "ru": "Открыть дочернюю вкладку (в конце ветви)",
-    "zh_CN": "打开新标签页作为活动标签的最后一个子标签",
+    "zh_CN": "打开新标签页作为活动标签页的最后一个子标签页",
     "zh_TW": "開啟新分頁作為當前分頁的最後一個子分頁",
     "ja": "アクティブなタブの最後の子として新しいタブを開く"
   },
@@ -329,7 +371,7 @@
     "hu": "Az aktív lap feletti lapok bezárása",
     "pl": "Zamknij karty powyżej (w obecnym panelu)",
     "ru": "Закрыть вкладки выше (в текущей панели)",
-    "zh_CN": "关闭上面的选项卡（当前面板中）",
+    "zh_CN": "关闭上面的标签页（当前面板中）",
     "zh_TW": "關閉上方分頁（當前面板中）",
     "ja": "上のタブを閉じる（現在のパネル内）"
   },
@@ -339,7 +381,7 @@
     "hu": "Az aktív lap alatti lapok bezárása",
     "pl": "Zamknij karty poniżej (w obecnym panelu)",
     "ru": "Закрыть вкладки ниже (в текущей панели)",
-    "zh_CN": "关闭下面的选项卡（当前面板中）",
+    "zh_CN": "关闭下面的标签页（当前面板中）",
     "zh_TW": "關閉下方分頁（當前面板中）",
     "ja": "下のタブを閉じる（現在のパネル内）"
   },
@@ -349,7 +391,7 @@
     "hu": "A többi lap bezárása (az aktív panelon)",
     "pl": "Zamknij inne karty (w obecnym panelu)",
     "ru": "Закрыть другие вкладки (в текущей панели)",
-    "zh_CN": "关闭其他选项卡（当前面板中）",
+    "zh_CN": "关闭其他标签页（当前面板中）",
     "zh_TW": "關閉其他分頁（當前面板中）",
     "ja": "他のタブを閉じる（現在のパネル内）"
   },
@@ -429,7 +471,7 @@
     "hu": "Az utódlapok kijelölése",
     "pl": "Zaznacz potomne karty",
     "ru": "Выделить дочерние вкладки",
-    "zh_CN": "选择子选项卡",
+    "zh_CN": "选择子标签页",
     "zh_TW": "選取子分頁",
     "ja": "子タブを選択"
   },
@@ -457,7 +499,7 @@
     "en": "Unload selected/active tabs",
     "de": "Ausgewählte/aktive Tabs entladen",
     "hu": "A kijelölt/aktív lap kisöprése",
-    "pl": "Rozładuj zaznaczone/aktywne karty",
+    "pl": "Uśpij zaznaczone/aktywne karty",
     "ru": "Выгрузить выделенные/активные вкладки",
     "zh_CN": "卸载选定/活动标签页",
     "zh_TW": "卸載選定/當前分頁",
@@ -467,7 +509,7 @@
     "en": "Unload all tabs in panel",
     "de": "Alle Tabs im Panel entladen",
     "hu": "A panel összes lapjának kisöprése",
-    "pl": "Rozładuj wszystkie karty w panelu",
+    "pl": "Uśpij wszystkie karty w panelu",
     "ru": "Выгрузить все вкладки в панели",
     "zh_CN": "卸载面板中的全部标签页",
     "zh_TW": "卸載面板中的全部分頁",
@@ -477,7 +519,7 @@
     "en": "Unload other tabs in panel",
     "de": "Andere Tabs im Panel entladen",
     "hu": "A panel többi lapjának kisöprése",
-    "pl": "Rozładuj inne karty w panelu",
+    "pl": "Uśpij inne karty w panelu",
     "ru": "Выгрузить другие вкладки на панели",
     "zh_CN": "卸载面板中的其他标签页",
     "zh_TW": "卸載面板中的其他分頁",
@@ -487,7 +529,7 @@
     "en": "Unload folded tabs in panel",
     "de": "Gefaltete Tabs im Panel entladen",
     "hu": "A panel becsukott lapjainak kisöprése",
-    "pl": "Rozładuj złożone karty w panelu",
+    "pl": "Uśpij zwinięte karty w panelu",
     "ru": "Выгрузить свернутые вкладки на панели",
     "zh_CN": "卸载面板中的折叠标签页",
     "zh_TW": "卸載面板中的折疊分頁",
@@ -497,7 +539,7 @@
     "en": "Unload all tabs in inactive panels",
     "de": "Alle Tabs in inaktiven Panels entladen",
     "hu": "Az inaktív panelok lapjainak kisöprése",
-    "pl": "Rozładuj wszystkie karty w nieaktywnych panelach",
+    "pl": "Uśpij wszystkie karty w nieaktywnych panelach",
     "ru": "Выгрузить все вкладки в неактивных панелях",
     "zh_CN": "卸载非活动面板中的全部标签页",
     "zh_TW": "卸載非作用中面板中的全部分頁",
@@ -554,41 +596,41 @@
   },
   "KbActPrevActTab": {
     "en": "Active tabs history: Back",
-    "de": "Aktive Tabs Chronik: Zurück",
+    "de": "Tab-Aktivierungschronik: Zurück",
     "hu": "Aktív lapok előzménye: vissza",
     "pl": "Aktywuj historię kart: Wstecz",
     "ru": "История активных вкладок: Назад",
-    "zh_CN": "前一活动标签",
+    "zh_CN": "前一活动标签页",
     "zh_TW": "前一分頁",
     "ja": "アクティブなタブの履歴: 戻る"
   },
   "KbActNextActTab": {
     "en": "Active tabs history: Forward",
-    "de": "Aktive Tabs Chronik: Vor",
+    "de": "Tab-Aktivierungschronik: Vor",
     "hu": "Aktív lapok előzménye: előre",
     "pl": "Aktywuj historię kart: Naprzód",
     "ru": "История активных вкладок: Вперед",
-    "zh_CN": "后一活动标签",
+    "zh_CN": "后一活动标签页",
     "zh_TW": "後一分頁",
     "ja": "アクティブなタブの履歴: 進む"
   },
   "KbActPanelPrevActTab": {
     "en": "Active tabs history of panel: Back",
-    "de": "Aktive Tabs Chronik des Panels: Zurück",
+    "de": "Tab-Aktivierungschronik des aktiven Panels: Zurück",
     "hu": "A panel aktív lapjainak előzménye: vissza",
     "pl": "Aktywuj historię kart w panelu: Wstecz",
     "ru": "История активных вкладок панели: Назад",
-    "zh_CN": "前一活动标签（活动面板）",
+    "zh_CN": "前一活动标签页（活动面板）",
     "zh_TW": "前一分頁（當前面板）",
     "ja": "パネルのアクティブなタブの履歴: 戻る"
   },
   "KbActPanelNextActTab": {
     "en": "Active tabs history of panel: Forward",
-    "de": "Aktive Tabs Chronik des Panels: Vor",
+    "de": "Tab-Aktivierungschronik des aktiven Panels: Vor",
     "hu": "A panel aktív lapjainak előzménye: előre",
     "pl": "Aktywuj historię kart w panelu: Naprzód",
     "ru": "История активных вкладок панели: Вперед",
-    "zh_CN": "后一活动标签（活动面板）",
+    "zh_CN": "后一活动标签页（活动面板）",
     "zh_TW": "後一分頁（當前面板）",
     "ja": "パネルのアクティブなタブの履歴: 進む"
   },
@@ -1195,7 +1237,7 @@
     "en": "Unload",
     "de": "Entladen",
     "hu": "Kisöprés",
-    "pl": "Rozładuj",
+    "pl": "Uśpij",
     "ru": "Выгрузить",
     "zh_CN": "卸载标签页",
     "zh_TW": "卸載分頁",

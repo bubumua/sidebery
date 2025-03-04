@@ -268,6 +268,7 @@ export async function removeTabs(
     parents[t.id] = t.parentId
     if (!t.invisible) visibleLen++
     t.invisible = true
+    t.removing = true
     if (t.active) activeTab = t
   })
 
@@ -291,7 +292,14 @@ export async function removeTabs(
   }
 
   // Update successorTabId if there is an active tab
-  if (activeTab) Tabs.updateSuccessionDebounced(0, toRemove)
+  if (activeTab) {
+    const successor = Tabs.updateSuccessionDebounced(0)
+    // Activate tab, since Firefox ignores the succession if there are
+    // highlighted tabs
+    if (Settings.state.nativeHighlight && successor) {
+      await browser.tabs.update(successor.id, { active: true })
+    }
+  }
 
   if (!silent && count > 1 && Settings.state.tabsRmUndoNote && !warn) {
     if (removedParent) {
@@ -423,6 +431,7 @@ export function checkRemovedTabs(delay = 750): void {
 
             tab.reactive.lvl = tab.lvl = parent ? parent.lvl + 1 : 0
             tab.invisible = false
+            tab.removing = false
 
             const rmIndex = Tabs.removingTabs.indexOf(tab.id)
             if (rmIndex !== -1) Tabs.removingTabs.splice(rmIndex, 1)

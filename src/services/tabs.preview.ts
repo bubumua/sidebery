@@ -39,7 +39,6 @@ export const state = {
 }
 
 const approxFFToolbarsHeight = 70
-const approxPopupHeaderHeight = 40
 const inlinePreviewConf = {
   format: 'jpeg' as const,
   quality: 90,
@@ -83,11 +82,8 @@ export function setTargetTab(tabId: ID, y: number) {
     tooltipUpdTimeout = setTimeout(() => {
       const tab = Tabs.byId[tabId]
       if (tab) {
-        const isClosed = state.status === Status.Closed
         if (
           (Settings.state.previewTabsMode === 'p' && state.mode === Mode.Nope) ||
-          (state.mode === Mode.InPage && isClosed && (tab.discarded || tab.active)) ||
-          (state.mode === Mode.Window && isClosed && (tab.discarded || tab.active)) ||
           (state.mode === Mode.Inline && tab.discarded)
         ) {
           tab.reactive.tooltip = Tabs.getTooltip(tab)
@@ -119,7 +115,7 @@ export function setTargetTab(tabId: ID, y: number) {
     if (state.status === Status.Closed) {
       state.mouseEnterTimeout = setTimeout(() => {
         state.mouseEnterTimeout = undefined
-        showPreview(state.targetTabId, y)
+        showPreview(state.targetTabId, Mouse.y)
       }, Settings.state.previewTabsDelay)
       return
     }
@@ -189,17 +185,20 @@ function getTabPreviewInitData(tabId: ID, y?: number): TabPreviewInitData {
     url: tab?.url ?? '---',
     y: y ?? 0,
     dpr: window.devicePixelRatio,
+    sh: Sidebar.height,
     popupWidth: Settings.state.previewTabsPopupWidth,
     offsetY: Settings.state.previewTabsInPageOffsetY,
     offsetX: Settings.state.previewTabsInPageOffsetX,
     atTheLeft: Settings.state.previewTabsSide === 'right',
     rCrop: Settings.state.previewTabsCropRight,
+    tMax: Settings.state.previewTabsTitle,
+    uMax: Settings.state.previewTabsUrl,
   }
 }
 
 async function showPreview(tabId: ID, y?: number) {
   const tab = Tabs.byId[tabId]
-  if (!tab || tab.invisible || tab.discarded || tab.active) return
+  if (!tab || tab.invisible) return
 
   // Inline
   if (state.mode === Mode.Inline) {
@@ -268,7 +267,7 @@ export function resetMode() {
 
 export async function showPreveiwPopupWindow(tabId: ID, y?: number) {
   const tab = Tabs.byId[tabId]
-  if (!tab || tab.invisible || tab.discarded) return
+  if (!tab || tab.invisible) return
 
   state.status = Status.Opening
 
@@ -298,13 +297,17 @@ export async function showPreveiwPopupWindow(tabId: ID, y?: number) {
     winId: Windows.id.toString(),
     title: tab.title,
     url: tab.url,
+    tMax: Settings.state.previewTabsTitle.toString(),
+    uMax: Settings.state.previewTabsUrl.toString(),
   }
 
   const pageWidth = currentWinWidth - Sidebar.width
+  const approxPageHeight = currentWinHeight - approxFFToolbarsHeight
 
   // Calc preview height
-  let previewHeight = Math.round((currentWinHeight / pageWidth) * previewWidth)
+  let previewHeight = Math.round((approxPageHeight / pageWidth) * previewWidth)
   if (previewHeight > previewWidth) previewHeight = previewWidth
+  previewData.ph = previewHeight.toString()
 
   // Calc preview scale
   const w = pageWidth / previewWidth
@@ -313,7 +316,8 @@ export async function showPreveiwPopupWindow(tabId: ID, y?: number) {
   if (scale > window.devicePixelRatio) scale = window.devicePixelRatio
 
   // Append height of header to previewHeight
-  previewHeight += approxPopupHeaderHeight
+  if (Settings.state.previewTabsTitle > 0) previewHeight += 22
+  if (Settings.state.previewTabsUrl > 0) previewHeight += 18
 
   previewData.scale = String(scale)
 

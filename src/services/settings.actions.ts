@@ -44,6 +44,8 @@ export async function loadSettings(): Promise<void> {
   parsePrefaceTemplate()
 
   Search.parseShortcuts()
+
+  updPrecalcSettings()
 }
 
 export async function saveSettings(): Promise<void> {
@@ -129,7 +131,7 @@ export function updateSettingsBg(settings?: SettingsState | null): void {
       if (!next.markWindow) {
         browser.windows.update(win.id, { titlePreface: '' })
       } else if (IPC.isConnected(InstanceType.sidebar, win.id)) {
-        IPC.sendToSidebar(win.id, 'updWindowPreface')
+        IPC.sendToSidebar(win.id, 'updWindowPreface', next.markWindowPreface)
       }
     }
   } else if (markWindowPrefaceChanged) {
@@ -144,6 +146,8 @@ export function updateSettingsBg(settings?: SettingsState | null): void {
   if (snapIntervalChanged || snapIntervalUnitChanged) Snapshots.scheduleSnapshots()
 
   if (colorSchemeChanged) Styles.updateColorScheme()
+
+  updPrecalcSettings()
 }
 
 export function updateSettingsFg(settings?: SettingsState | null): void {
@@ -190,6 +194,8 @@ export function updateSettingsFg(settings?: SettingsState | null): void {
   // Update settings of this instance
   Utils.updateObject(Settings.state, settings, Settings.state)
 
+  updPrecalcSettings()
+
   if (Info.isSidebar && newTabCtxReopen) updateWebReqHandlers()
 
   if (Info.isSidebar && tabsUnreadMark && !next.tabsUnreadMark) {
@@ -200,7 +206,7 @@ export function updateSettingsFg(settings?: SettingsState | null): void {
     Tabs.list.forEach(t => Tabs.updateTooltip(t.id))
   }
 
-  if (previewTabsMode) {
+  if (previewTabs || previewTabsMode) {
     Preview.resetMode()
   }
 
@@ -283,8 +289,20 @@ export function updateSettingsFg(settings?: SettingsState | null): void {
   Search.parseShortcuts()
 }
 
+function updPrecalcSettings() {
+  Settings.rmChildTabsFolded = Settings.state.rmChildTabs === 'folded'
+  Settings.rmChildTabsAll = Settings.state.rmChildTabs === 'all'
+  Settings.rmChildTabsNone = Settings.state.rmChildTabs === 'none'
+
+  Settings.activateAfterClosingNone = Settings.state.activateAfterClosing === 'none'
+  Settings.activateAfterClosingNext = Settings.state.activateAfterClosing === 'next'
+  Settings.activateAfterClosingPrev = Settings.state.activateAfterClosing === 'prev'
+  Settings.activateAfterClosingPrevAct = Settings.state.activateAfterClosing === 'prev_act'
+}
+
 export function resetSettings(): void {
   Utils.updateObject(Settings.state, DEFAULT_SETTINGS, DEFAULT_SETTINGS)
+  updPrecalcSettings()
 }
 
 /**

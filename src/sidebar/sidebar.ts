@@ -25,7 +25,6 @@ import { Info } from 'src/services/info'
 import SidebarRoot from './sidebar.vue'
 import { Snapshots } from 'src/services/snapshots'
 import { updateWebReqHandlers } from 'src/services/web-req.fg'
-import { initUpgrading, showUpgradingScreen } from 'src/services/upgrading'
 import { Sync } from 'src/services/_services'
 
 async function main(): Promise<void> {
@@ -59,6 +58,9 @@ async function main(): Promise<void> {
     onOutsideSearchExit: Search.onOutsideSearchExit,
     onOutsideSearchBookmarks: Search.bookmarks,
     onOutsideSearchHistory: Search.history,
+    onOutsideEditingInput: Tabs.onOutsideEditingInput,
+    onOutsideEditingEnter: Tabs.onOutsideEditingEnter,
+    onOutsideEditingExit: Tabs.onOutsideEditingExit,
     notifyAboutNewSnapshot: Snapshots.notifyAboutNewSnapshot,
     notifyAboutWrongProxyAuthData: Notifications.notifyAboutWrongProxyAuthData,
     notify: Notifications.notify,
@@ -66,6 +68,7 @@ async function main(): Promise<void> {
     storageChanged: Store.storageChangeListener,
     connectTo: IPC.connectTo,
     getSearchQuery: Search.getSearchQuery,
+    getEditingValue: Tabs.getEditingValue,
     updWindowPreface: Windows.updWindowPreface,
   })
 
@@ -98,16 +101,11 @@ async function main(): Promise<void> {
   Search.reactive = reactive(Search.reactive)
   Styles.reactive = reactive(Styles.reactive)
   Sync.initSync(reactive)
-  initUpgrading(reactive)
 
   Styles.updateGlobalFontSize()
 
   const app = createApp(SidebarRoot)
   app.mount('#root_container')
-
-  if (Info.isMajorUpgrade()) {
-    return showUpgradingScreen()
-  }
 
   Settings.setupSettingsChangeListener()
   Permissions.setupListeners()
@@ -115,7 +113,7 @@ async function main(): Promise<void> {
   Containers.setupContainersListeners()
   Sidebar.setupListeners()
 
-  if (Settings.state.sidebarCSS) Styles.loadCustomSidebarCSS()
+  Styles.loadCustomSidebarCSS()
   Styles.initColorScheme()
 
   await Sidebar.loadPanels()
@@ -146,6 +144,11 @@ async function main(): Promise<void> {
   Keybindings.setupListeners()
 
   Search.init()
+
+  IPC.onDisconnected(InstanceType.editing, (id: ID) => {
+    if (Windows.id !== id) return
+    if (Tabs.byId[Tabs.editableTabId]) Tabs.onOutsideEditingExit()
+  })
 
   if (Settings.state.updateSidebarTitle) Sidebar.updateSidebarTitle(0)
 

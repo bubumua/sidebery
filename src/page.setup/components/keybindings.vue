@@ -10,6 +10,11 @@
     KeybindingField(:keybinding="Keybindings.reactive.byName.open_snap_viewer")
     KeybindingField(:keybinding="Keybindings.reactive.byName.menu")
     .info(v-if="Settings.state.ctxMenuNative") {{translate('settings.kb_menu_note')}}
+    KeybindingField(:keybinding="Keybindings.reactive.byName.open_panel_config")
+    KeybindingField(:keybinding="Keybindings.reactive.byName.copy_title")
+    KeybindingField(:keybinding="Keybindings.reactive.byName.copy_url")
+    KeybindingField(:keybinding="Keybindings.reactive.byName.open_bookmarks_sub_panel")
+    KeybindingField(:keybinding="Keybindings.reactive.byName.open_sync_popup")
 
   section
     h2 {{translate('settings.kb_switching_panel')}}
@@ -26,6 +31,7 @@
     KeybindingField(:keybinding="Keybindings.reactive.byName.switch_to_panel_7")
     KeybindingField(:keybinding="Keybindings.reactive.byName.switch_to_panel_8")
     KeybindingField(:keybinding="Keybindings.reactive.byName.switch_to_panel_9")
+    KeybindingField(:keybinding="Keybindings.reactive.byName.switch_to_prev_panel")
 
   section
     h2 {{translate('settings.kb_scroll_active_panel')}}
@@ -41,6 +47,7 @@
     KeybindingField(:keybinding="Keybindings.reactive.byName.group_tabs")
     KeybindingField(:keybinding="Keybindings.reactive.byName.group_tabs_act")
     KeybindingField(:keybinding="Keybindings.reactive.byName.flatten_tabs")
+    KeybindingField(:keybinding="Keybindings.reactive.byName.edit_title")
 
   section
     h2 {{translate('settings.kb_tabs_open')}}
@@ -73,6 +80,10 @@
         ToggleField(
           label="settings.select_active_tab_first"
           v-model:value="Settings.state.selectActiveTabFirst"
+          @update:value="Settings.saveDebounced(150)")
+        ToggleField(
+          label="settings.select_cyclic"
+          v-model:value="Settings.state.selectCyclic"
           @update:value="Settings.saveDebounced(150)")
       KeybindingField(:keybinding="Keybindings.reactive.byName.up_shift")
       KeybindingField(:keybinding="Keybindings.reactive.byName.down_shift")

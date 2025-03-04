@@ -8,7 +8,7 @@
   },
   "author": "mbnuqw",
   "name": "__MSG_ExtName__",
-  "version": "5.2.0",
+  "version": "5.3.3",
   "default_locale": "en",
   "description": "__MSG_ExtDesc__",
   "homepage_url": "https://github.com/mbnuqw/sidebery",
@@ -250,6 +250,9 @@
     "switch_to_panel_9": {
       "description": "__MSG_KbSwitchToPanel9__"
     },
+    "switch_to_prev_panel": {
+      "description": "__MSG_KbSwitchToPrevPanel__"
+    },
     "move_tabs_to_panel_0": {
       "description": "__MSG_KbMoveTabsToPanel0__"
     },
@@ -385,6 +388,9 @@
     "flatten_tabs": {
       "description": "__MSG_KbFlattenTabs__"
     },
+    "edit_title": {
+      "description": "__MSG_KbEditTitle__"
+    },
     "sel_child_tabs": {
       "description": "__MSG_KbSelChildTabs__"
     },
@@ -423,6 +429,21 @@
     },
     "sort_panel_tabs_by_time_des": {
       "description": "__MSG_KbSortPanelTabsByTimeDes__"
+    },
+    "open_panel_config": {
+      "description": "__MSG_KbOpenPanelConfig__"
+    },
+    "copy_title": {
+      "description": "__MSG_KbCopyTitle__"
+    },
+    "copy_url": {
+      "description": "__MSG_KbCopyUrl__"
+    },
+    "open_bookmarks_sub_panel": {
+      "description": "__MSG_KbOpenBookmarksSubPanel__"
+    },
+    "open_sync_popup": {
+      "description": "__MSG_KbOpenSyncPopup__"
     }
   },
   "browser_action": {
