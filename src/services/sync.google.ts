@@ -5,6 +5,8 @@ import { Store } from './storage'
 import { SyncedEntry } from './sync'
 import { Favicons } from './_services.fg'
 import { NOID } from 'src/defaults'
+import { Notifications } from './notifications'
+import { translate } from 'src/dict'
 
 export interface ProfileInfo {
   name: string
@@ -110,41 +112,54 @@ export function syncEntryTypeToFileType(entryType: Sync.SyncedEntryType): FileTy
   }
 }
 
-let cachedFileIds: Map<FileType, string | null> | null = null
+let cachedFileIds: Map<FileType, string> | null = null
 
-async function loadCachedFileIds() {
+async function loadCachedFileIds(): Promise<Map<FileType, string>> {
   Logs.info('Sync.Google.loadCachedFileIds()')
 
   const stored = await browser.storage.local.get<Stored>('googleDriveFileIds')
-  const storedIds = stored?.googleDriveFileIds ?? {}
-  const cachedIds = new Map()
-  cachedIds.set(FileType.ProfileInfo, storedIds[typeNames[FileType.ProfileInfo]] ?? null)
-  cachedIds.set(FileType.Settings, storedIds[typeNames[FileType.Settings]] ?? null)
-  cachedIds.set(FileType.CtxMenu, storedIds[typeNames[FileType.CtxMenu]] ?? null)
-  cachedIds.set(FileType.Styles, storedIds[typeNames[FileType.Styles]] ?? null)
-  cachedIds.set(FileType.Keybindings, storedIds[typeNames[FileType.Keybindings]] ?? null)
+  const storedIds: Record<string, string | undefined> = stored?.googleDriveFileIds ?? {}
+  const cachedIds = new Map<FileType, string>()
 
-  Logs.info('Sync.Google.loadCachedFileIds(): Loaded:', cachedIds)
+  const profileInfoId = storedIds[typeNames[FileType.ProfileInfo]]
+  if (profileInfoId) cachedIds.set(FileType.ProfileInfo, profileInfoId)
+  const settingsId = storedIds[typeNames[FileType.Settings]]
+  if (settingsId) cachedIds.set(FileType.Settings, settingsId)
+  const menuId = storedIds[typeNames[FileType.CtxMenu]]
+  if (menuId) cachedIds.set(FileType.CtxMenu, menuId)
+  const stylesId = storedIds[typeNames[FileType.Styles]]
+  if (stylesId) cachedIds.set(FileType.Styles, stylesId)
+  const kbId = storedIds[typeNames[FileType.Keybindings]]
+  if (kbId) cachedIds.set(FileType.Keybindings, kbId)
 
   return cachedIds
 }
 
 async function saveCachedFileIds() {
-  Logs.info('Sync.Google.saveCachedFileIds():', cachedFileIds)
+  Logs.info('Sync.Google.saveCachedFileIds()')
 
   if (!cachedFileIds) return Logs.err('Sync.Google.saveCachedFileIds(): Nothing to save')
 
-  const storedIds: Record<string, string | null> = {}
+  const storedIds: Record<string, string> = {}
 
   for (const [fileType, id] of cachedFileIds) {
     if (id !== undefined) storedIds[typeNames[fileType]] = id
   }
 
-  Logs.info('Sync.Google.saveCachedFileIds(): storedIds:', storedIds)
-
   await Store.set({ googleDriveFileIds: storedIds })
 }
 const saveCachedFileIdsDebounced = Utils.debounce(saveCachedFileIds)
+
+export async function removeCachedId(id: string) {
+  // Load cached file ids if needed
+  if (!cachedFileIds) cachedFileIds = new Map(await loadCachedFileIds())
+
+  const type = cachedFileIds.entries().find(([_, cid]) => id === cid)?.[0]
+  if (type === undefined) return
+
+  cachedFileIds.delete(type)
+  saveCachedFileIds()
+}
 
 async function updateCachedFileIds() {
   Logs.info('Sync.Google.updateCachedFileIds()')
@@ -152,7 +167,7 @@ async function updateCachedFileIds() {
   // Get all files of this profile
   const profileId = Sync.getProfileId()
   const files = await Google.Drive.listFiles({
-    fields: ['id'],
+    fields: ['id', 'appProperties'],
     q: `name contains '${Sync.getProfileId()}'`,
   })
   if (!files) return null
@@ -178,11 +193,11 @@ async function updateCachedFileIds() {
     if (fileType === typeNames[FileType.Keybindings]) keybindingsId = file.id
   }
 
-  cachedFileIds.set(FileType.ProfileInfo, profileInfoId ?? null)
-  cachedFileIds.set(FileType.Settings, settingsId ?? null)
-  cachedFileIds.set(FileType.CtxMenu, ctxMenuId ?? null)
-  cachedFileIds.set(FileType.Styles, stylesId ?? null)
-  cachedFileIds.set(FileType.Keybindings, keybindingsId ?? null)
+  if (profileInfoId) cachedFileIds.set(FileType.ProfileInfo, profileInfoId)
+  if (settingsId) cachedFileIds.set(FileType.Settings, settingsId)
+  if (ctxMenuId) cachedFileIds.set(FileType.CtxMenu, ctxMenuId)
+  if (stylesId) cachedFileIds.set(FileType.Styles, stylesId)
+  if (keybindingsId) cachedFileIds.set(FileType.Keybindings, keybindingsId)
 
   saveCachedFileIds()
 }
@@ -196,70 +211,75 @@ export async function save<T>(
   props?: Record<string, string>,
   noRetry?: boolean
 ): Promise<Google.Drive.GDOutputFile | null | void> {
+  return QUEUE.add(_save, type, content, props, noRetry)
+}
+async function _save<T>(
+  type: FileType,
+  content: T,
+  props?: Record<string, string>,
+  noRetry?: boolean
+): Promise<Google.Drive.GDOutputFile | null | void> {
   Logs.info('Sync.Google.save():', typeNames[type])
 
-  return QUEUE.add(async () => {
-    // Load cached file ids if needed
-    if (!cachedFileIds) {
-      Logs.info('Sync.Google.save(): No cached file ids, loading...')
-      cachedFileIds = new Map(await loadCachedFileIds())
+  // Load cached file ids if needed
+  if (!cachedFileIds) {
+    Logs.info('Sync.Google.save(): No cached file ids, loading...')
+    cachedFileIds = new Map(await loadCachedFileIds())
+  }
+
+  const fileName = getFileName(type)
+  const cachedId = cachedFileIds.get(type)
+  let fileId: string | undefined
+
+  // Cached id is found
+  if (cachedId) {
+    fileId = cachedId
+  }
+
+  // No cached id: Fetch list of files and update cached file ids
+  else if (!cachedId) {
+    Logs.info('Sync.Google.save(): No cached id: Upd cache')
+    await updateCachedFileIds()
+    fileId = cachedFileIds.get(type) ?? undefined
+    Logs.info('Sync.Google.save(): Cache updated: Id:', fileId)
+  }
+
+  const addonVer = browser.runtime.getManifest().version
+  const profileId = Sync.getProfileId()
+  const appProps = { ver: addonVer, type: typeNames[type], profileId, ...props }
+
+  // No file: Create new
+  if (!fileId) {
+    const newFile = await Google.Drive.createJsonFile({
+      name: fileName,
+      content,
+      appProperties: appProps,
+    })
+    if (newFile?.id) {
+      cachedFileIds.set(type, newFile.id)
+      saveCachedFileIdsDebounced(200)
+    } else {
+      throw 'Cannot create new file'
     }
+    return newFile
+  }
 
-    const fileName = getFileName(type)
-    const cachedId = cachedFileIds.get(type)
-    let fileId: string | undefined
-
-    // Cached id is found
-    if (cachedId) {
-      fileId = cachedId
+  // Try to update existed file
+  try {
+    return await Google.Drive.updateJsonFile({ fileId, content, appProperties: appProps })
+  } catch (err) {
+    if (noRetry) {
+      Logs.err('Sync.Google.save(): Cannot update file:', err)
+      return
     }
+    Logs.warn('Sync.Google.save(): Cannot update file, retrying...', err)
 
-    // No cached id: Fetch list of files and update cached file ids
-    // cachedId === null means the absence of file
-    else if (cachedId === undefined) {
-      Logs.info('Sync.Google.save(): No cached id: Upd cache')
-      await updateCachedFileIds()
-      fileId = cachedFileIds.get(type) ?? undefined
-      Logs.info('Sync.Google.save(): Cache updated: Id:', fileId)
-    }
+    // Reset cached id and try again
+    cachedFileIds.delete(type)
+    saveCachedFileIds()
 
-    const addonVer = browser.runtime.getManifest().version
-    const profileId = Sync.getProfileId()
-    const appProps = { ver: addonVer, type: typeNames[type], profileId, ...props }
-
-    // No file: Create new
-    if (!fileId) {
-      const newFile = await Google.Drive.createJsonFile({
-        name: fileName,
-        content,
-        appProperties: appProps,
-      })
-      if (newFile?.id) {
-        cachedFileIds.set(type, newFile.id)
-        saveCachedFileIdsDebounced(200)
-      } else {
-        throw 'Cannot create new file'
-      }
-      return newFile
-    }
-
-    // Try to update existed file
-    try {
-      return await Google.Drive.updateJsonFile({ fileId, content, appProperties: appProps })
-    } catch (err) {
-      if (noRetry) {
-        Logs.err('Sync.Google.save(): Cannot update file:', err)
-        return
-      }
-      Logs.warn('Sync.Google.save(): Cannot update file, retrying...', err)
-
-      // Reset cached id and try again
-      cachedFileIds.set(type, null)
-      saveCachedFileIds()
-
-      return await save(type, content, props, true)
-    }
-  })
+    return await _save(type, content, props, true)
+  }
 }
 
 /**
@@ -277,7 +297,7 @@ export async function remove(type: FileType) {
     if (fileId) {
       try {
         await Google.Drive.deleteFile(fileId)
-        cachedFileIds.set(type, null)
+        cachedFileIds.delete(type)
         saveCachedFileIds()
         return
       } catch (err) {
@@ -290,7 +310,7 @@ export async function remove(type: FileType) {
 
     // No files: Nothing to do
     if (!files || !files.length) {
-      cachedFileIds.set(type, null)
+      cachedFileIds.delete(type)
       saveCachedFileIds()
       return
     }
@@ -301,7 +321,7 @@ export async function remove(type: FileType) {
       }
     }
 
-    cachedFileIds.set(type, null)
+    cachedFileIds.delete(type)
     saveCachedFileIds()
   })
 }
@@ -336,7 +356,10 @@ export async function loadOtherProfilesInfo(): Promise<ProfileInfo[]> {
 }
 
 export async function saveProfileInfo() {
-  Logs.info('Sync.Google.saveProfileInfo()')
+  return QUEUE.add(_saveProfileInfo)
+}
+async function _saveProfileInfo() {
+  Logs.info('Sync.Google._saveProfileInfo()')
 
   const profileInfo: ProfileInfo = {
     name: Settings.state.syncName.trim(),
@@ -349,7 +372,7 @@ export async function saveProfileInfo() {
     profileIcon: 'default',
     profileColor: 'toolbar',
   }
-  await Sync.Google.save(FileType.ProfileInfo, profileInfo, props)
+  await _save(FileType.ProfileInfo, profileInfo, props)
 }
 
 export async function removeAllFilesOfThisProfile() {
@@ -375,7 +398,7 @@ export async function removeAllFilesOfThisProfile() {
   })
 }
 
-export async function loadSyncedEntries(): Promise<SyncedEntry[]> {
+export async function loadSyncedEntries(): Promise<SyncedEntry[] | null> {
   Logs.info('Sync.Google.loadSyncedEntries()')
 
   const entries: SyncedEntry[] = []
@@ -383,18 +406,22 @@ export async function loadSyncedEntries(): Promise<SyncedEntry[]> {
     fields: ['id', 'name', 'size', 'modifiedTime', 'appProperties'],
     orderBy: 'modifiedTime',
   })
-  if (!filesInfo || filesInfo.length === 0) {
+  if (!filesInfo) {
+    Logs.err('Sync.Google.loadSyncedEntries(): Cannot list files')
+    return null
+  }
+  if (filesInfo.length === 0) {
     Logs.warn('Sync.Google.loadSyncedEntries(): No files')
     return entries
   }
 
-  Logs.info('Sync.Google.loadSyncedEntries(): Files:', filesInfo)
+  Logs.info('Sync.Google.loadSyncedEntries(): Files count:', filesInfo.length)
 
   const profileId = Sync.getProfileId()
   const dayStartTime = Utils.getDayStartMS()
 
   // Get profile info
-  const profiles: Record<string, ProfileInfo> = {}
+  const profiles: Record<string, ProfileInfo | undefined> = {}
   const profileFileType = typeNames[FileType.ProfileInfo]
   for (const fileInfo of filesInfo) {
     const props = fileInfo.appProperties
@@ -404,6 +431,19 @@ export async function loadSyncedEntries(): Promise<SyncedEntry[]> {
         icon: props.profileIcon,
         color: props.profileColor,
       }
+    }
+  }
+
+  // Check current profile info and update it if needed
+  const currentProfileInfo = profiles[profileId]
+  const currentProfileName = Settings.state.syncName.trim()
+  if (!currentProfileInfo || currentProfileInfo.name !== currentProfileName) {
+    Logs.info('Sync.Googld.loadSyncedEntries: No, or wrong profile, re-saving...')
+    await _saveProfileInfo()
+    profiles[profileId] = {
+      name: currentProfileName,
+      icon: 'default',
+      color: 'toolbar',
     }
   }
 
@@ -418,15 +458,15 @@ export async function loadSyncedEntries(): Promise<SyncedEntry[]> {
 
     const syncType = Sync.getSyncedType(props.type)
     // Skip non-sync file types
-    if (!syncType) {
-      Logs.info('Sync.Google.loadSyncedEntries(): Unknown type:', fileInfo)
-      continue
-    }
+    if (!syncType) continue
 
-    const profileInfo = profiles[props.profileId]
+    let profileInfo = profiles[props.profileId]
     if (!profileInfo) {
-      Logs.warn('Sync.Google.loadSyncedEntries(): Cannot find profile:', fileInfo, profiles)
-      continue
+      profileInfo = {
+        name: translate('sync.unknown_profile'),
+        icon: 'default',
+        color: 'toolbar',
+      }
     }
 
     // Load synced tabs
@@ -457,15 +497,25 @@ export async function loadSyncedEntries(): Promise<SyncedEntry[]> {
   }
 
   if (loadingTabEntries.length) {
-    const loadedTabEntryFiles = await Promise.all(loadingTabEntries)
-    for (const tabEntries of loadedTabEntryFiles) {
+    let withError = false
+    const loadedTabEntryFiles = await Promise.allSettled(loadingTabEntries)
+    for (const tabEntriesResult of loadedTabEntryFiles) {
+      const tabEntries = Utils.settledOr(tabEntriesResult, null)
       if (tabEntries) entries.push(...tabEntries)
+      else withError = true
+    }
+
+    if (withError) {
+      Notifications.notify({
+        icon: '#icon_sync',
+        lvl: 'err',
+        title: translate('sync.err.google_tabs'),
+        details: translate('sync.err.google_entries_sub'),
+      })
     }
   }
 
-  // TODO: Remove profile-info if there is no valid entries for it
-
-  Logs.info('Sync.Google.loadSyncedEntries(): Result:', entries)
+  Logs.info('Sync.Google.loadSyncedEntries(): entries count:', entries.length)
 
   return entries
 }
@@ -476,7 +526,7 @@ async function loadSyncedTabEntries(
   dayStartTime: number,
   currentProfileId: string
 ): Promise<SyncedEntry[] | void> {
-  Logs.info('Sync.Google.loadSyncedTabEntries():', fileInfo)
+  Logs.info('Sync.Google.loadSyncedTabEntries()')
 
   const props = fileInfo.appProperties
   if (!fileInfo.id || !fileInfo.modifiedTime || !props) {
@@ -489,8 +539,6 @@ async function loadSyncedTabEntries(
     Logs.warn('Sync.Google.loadSyncedTabEntries(): Cannot load file:', fileInfo)
     return
   }
-
-  Logs.info('Sync.Google.loadSyncedTabEntries(): Raw data:', data)
 
   if (props.profileId === currentProfileId) {
     cachedTabFilesData.set(fileInfo.id, data)
@@ -526,7 +574,7 @@ async function loadSyncedTabEntries(
     })
   }
 
-  Logs.info('Sync.Google.loadSyncedTabEntries(): Entries:', entries)
+  Logs.info('Sync.Google.loadSyncedTabEntries(): Entries length:', entries.length)
 
   return entries
 }
@@ -565,22 +613,27 @@ function syncedTabsToEntryTabs(tabsEntry: SyncedTabsBatch, favicons: Record<stri
   return tabs
 }
 
-const TABS_PER_FILE_LIMIT = 10
+const TABS_PER_FILE_LIMIT = 1000
 const TAB_FILES_MAX_COUNT = 3
 
 export async function saveTabs(
   tabsBatch: Sync.Google.SyncedTabsBatch,
   favicons: Record<string, string>
 ): Promise<SyncedEntry> {
-  Logs.info('Sync.Google.saveTabs():', tabsBatch)
+  return QUEUE.add(_saveTabs, tabsBatch, favicons)
+}
+async function _saveTabs(
+  tabsBatch: Sync.Google.SyncedTabsBatch,
+  favicons: Record<string, string>
+): Promise<SyncedEntry> {
+  Logs.info('Sync.Google.saveTabs()')
 
-  if (!Sync.ready) await Sync.load()
+  if (!Sync.ready) throw 'Sync service is not ready'
 
   const recentTabsEntry = Sync.reactive.entries.find(e => e.type === Sync.SyncedEntryType.Tabs)
   const oldestTabsEntry = Sync.reactive.entries.findLast(e => e.type === Sync.SyncedEntryType.Tabs)
   const recentFileId = recentTabsEntry?.gdFileId
   const oldestFileId = oldestTabsEntry?.gdFileId
-  Logs.info('Sync.Google.saveTabs(): recentFileId:', recentFileId)
 
   let recentFileData = recentFileId ? cachedTabFilesData.get(recentFileId) : undefined
   let tabFilesCount = cachedTabFilesData.size
@@ -591,16 +644,13 @@ export async function saveTabs(
   const profileId = Sync.getProfileId()
   const appProps = { ver: addonVer, type: typeNames[FileType.Tabs], profileId }
 
-  Logs.info('Sync.Google.saveTabs(): tabFilesCount:', tabFilesCount)
-  Logs.info('Sync.Google.saveTabs(): recentFileData:', Utils.clone(recentFileData))
-
   // Add new tabs and favicons
   if (recentFileData) {
-    Logs.info('Sync.Google.saveTabs(): Updating current file data...')
+    Logs.info('Sync.Google.saveTabs(): Current file data will be updated')
     recentFileData.batches.splice(0, 0, tabsBatch)
     Object.assign(recentFileData.favicons, favicons)
   } else {
-    Logs.info('Sync.Google.saveTabs(): Creating new file data...')
+    Logs.info('Sync.Google.saveTabs(): New file data will be created')
     recentFileData = {
       batches: [tabsBatch],
       favicons,
@@ -625,8 +675,6 @@ export async function saveTabs(
       }
 
       if (tabCount > TABS_PER_FILE_LIMIT && splitIndex > 0) {
-        Logs.info('Sync.Google.saveTabs(): Splitting file: splitIndex:', splitIndex)
-        Logs.info('Sync.Google.saveTabs(): Splitting file...', Utils.clone(recentFileData))
         newFileData = halveTabBatches(recentFileData, splitIndex)
         tabFilesCount++
         break
@@ -654,14 +702,12 @@ export async function saveTabs(
 
   // Create the first file
   else {
-    Logs.info('Sync.Google.saveTabs(): Creating the first file...', Utils.clone(recentFileData))
+    Logs.info('Sync.Google.saveTabs(): Creating the first file...')
     const createdFile = await Google.Drive.createJsonFile({
       name: Sync.Google.getFileName(FileType.Tabs),
       content: recentFileData,
       appProperties: appProps,
     })
-
-    Logs.info('Sync.Google.saveTabs(): The first file:', createdFile)
 
     if (createdFile?.id) {
       targetFileId = createdFile.id
@@ -673,13 +719,12 @@ export async function saveTabs(
 
   // Create a new file separated from the overflowed one
   if (newFileData) {
-    Logs.info('Sync.Google.saveTabs(): Creating a new separated file...', Utils.clone(newFileData))
+    Logs.info('Sync.Google.saveTabs(): Creating a new separated file...')
     const createdFile = await Google.Drive.createJsonFile({
       name: Sync.Google.getFileName(FileType.Tabs),
       content: newFileData,
       appProperties: appProps,
     })
-    Logs.info('Sync.Google.saveTabs(): The new file:', createdFile)
 
     if (createdFile?.id) {
       targetFileId = createdFile.id
@@ -694,7 +739,6 @@ export async function saveTabs(
     Logs.info('Sync.Google.saveTabs(): Removing the oldest file that exeeds the limit...')
     await Google.Drive.deleteFile(fileIdToRemove)
     cachedTabFilesData.delete(fileIdToRemove)
-    // TODO: update reactive Sync state
   }
 
   // Return the new entry
@@ -703,6 +747,7 @@ export async function saveTabs(
   const dayStartTime = Utils.getDayStartMS()
   const dateYYYYMMDD = entryTime ? Utils.dDate(entryTime, '.', dayStartTime) : '???'
   const timeHHMM = entryTime ? Utils.dTime(entryTime, ':', false) : '???'
+  Logs.info('Sync.Google.saveTabs: Returning entry...')
   return {
     id: tabsBatch.id,
     type: Sync.SyncedEntryType.Tabs,
@@ -766,14 +811,16 @@ function halveTabBatches(
 }
 
 export async function removeTabsEntry(entry: SyncedEntry) {
-  Logs.info('Sync.Google.removeTabsEntry():', entry)
+  return QUEUE.add(_removeTabsEntry, entry)
+}
+async function _removeTabsEntry(entry: SyncedEntry) {
+  Logs.info('Sync.Google.removeTabsEntry()')
 
   if (!entry.id || !entry.gdFileId) return
 
   // Load file data
   const fileData = await Google.Drive.getJsonFile<SyncedTabsFileData>(entry.gdFileId)
   if (!fileData) return
-  Logs.info('Sync.Google.removeTabsEntry(): loaded fileData:', Utils.clone(fileData))
 
   // Remove tabs batch from this data
   const rmIndex = fileData.batches.findIndex(batch => batch.id === entry.id)
@@ -800,7 +847,6 @@ export async function removeTabsEntry(entry: SyncedEntry) {
   if (fileData.batches.length) {
     // Update file
     const fileId = entry.gdFileId
-    Logs.info('Sync.Google.removeTabsEntry(): Update fileData:', fileId, Utils.clone(fileData))
     await Google.Drive.updateJsonFile({ fileId, content: fileData })
 
     // Update cache

@@ -114,7 +114,8 @@ export async function loadPanels(): Promise<void> {
 
   // Activate last active panel
   if (!Windows.incognito) {
-    let actPanel: Panel | undefined = Sidebar.panelsById[activeId]
+    let actPanel: Panel | undefined
+    if (activeId !== undefined) actPanel = Sidebar.panelsById[activeId]
     if (!actPanel) actPanel = Sidebar.panels.find(p => p.type === PanelType.tabs)
     if (actPanel) Sidebar.reactive.activePanelId = Sidebar.activePanelId = actPanel.id
     else Sidebar.reactive.activePanelId = Sidebar.activePanelId = Sidebar.panels[0]?.id ?? NOID
@@ -898,7 +899,7 @@ async function updateSidebar(newConfig?: SidebarConfig): Promise<void> {
   if (!newConfig) return
   if (!Sidebar.ready) return
 
-  const panelConfigs = Object.values(newConfig.panels)
+  const newPanelConfigs = Object.values(newConfig.panels)
   const newPanelsMap: Record<ID, Panel> = {}
   const oldNavItems = Sidebar.reactive.nav
   Sidebar.reactive.nav = newConfig.nav
@@ -915,12 +916,12 @@ async function updateSidebar(newConfig?: SidebarConfig): Promise<void> {
   let webReqHandlerNeeded = false
 
   // Loop over the new panels
-  for (const panelConfig of panelConfigs) {
-    let panel = Sidebar.panelsById[panelConfig.id]
+  for (const newPanelConfig of newPanelConfigs) {
+    let panel = Sidebar.panelsById[newPanelConfig.id]
 
     // Update existed panel
     if (panel) {
-      Object.assign(panel, panelConfig)
+      Object.assign(panel, newPanelConfig)
 
       const r = panel.reactive
       r.name = panel.name
@@ -938,7 +939,7 @@ async function updateSidebar(newConfig?: SidebarConfig): Promise<void> {
 
     // or add new panel
     else {
-      const newPanel = createPanelFromConfig(panelConfig)
+      const newPanel = createPanelFromConfig(newPanelConfig)
       if (!newPanel) throw Logs.err('Sidebar.updateSidebar: Cannot create new panel')
       panel = newPanel
       Sidebar.panelsById[panel.id] = panel
@@ -1105,7 +1106,7 @@ export function activatePanel(panelId: ID, loadPanels = true, keepSearching?: bo
   const isTabsPanel = Utils.isTabsPanel(panel)
   const isPrevTabsPanel = Utils.isTabsPanel(prevPanel)
 
-  let loading: Promise<void> | undefined
+  let loading
   if (loadPanels && !panel.ready) {
     if (isTabsPanel) loading = Tabs.load()
     else if (panel.type === PanelType.bookmarks) loading = Bookmarks.load()
@@ -1132,7 +1133,7 @@ export function activatePanel(panelId: ID, loadPanels = true, keepSearching?: bo
 
   if (isPrevTabsPanel) Sidebar.lastTabsPanelId = prevPanel.id
   else if (Utils.isHistoryPanel(prevPanel)) History.unloadAfter(30_000)
-  else if (Utils.isSyncPanel(prevPanel)) Sync.unloadAfter(30_000)
+  else if (Utils.isSyncPanel(prevPanel)) Sync.unloadAfter(5_000)
 
   if (DnD.reactive.isStarted) DnD.reactive.dstPanelId = panelId
 
@@ -1383,112 +1384,6 @@ export function switchPanel(
   if (!panel) return
 
   switchToPanel(panel.id, false, withoutTabCreation)
-}
-
-export function selectPanel(dir: 1 | -1) {
-  let isSelected = false
-  let selPanelId: ID | undefined
-  if (Selection.isNavItem()) {
-    const firstSelId = Selection.get()[0]
-    if (Sidebar.panelsById[firstSelId]) {
-      selPanelId = firstSelId
-      isSelected = true
-    }
-  }
-  if (selPanelId === undefined || !Sidebar.panelsById[selPanelId]) {
-    selPanelId = Sidebar.activePanelId
-  }
-
-  const selectedPanel: Panel | undefined = Sidebar.panelsById[selPanelId]
-  if (!selectedPanel) return
-
-  Menu.close()
-  Selection.resetSelection()
-
-  const hiddenPanelsPopupIsShown = Sidebar.reactive.hiddenPanelsPopup
-  const visiblePanels = []
-  const hiddenPanels = []
-  const isInline = Settings.state.navBarLayout === 'horizontal' && Settings.state.navBarInline
-  let hdnIndex = -1
-  let actIndex = -1
-  let actIsHidden = false
-  let newActIsHidden = false
-
-  for (const id of Sidebar.nav) {
-    if (id === 'hdn') {
-      hdnIndex = visiblePanels.length
-      continue
-    }
-
-    const panel = Sidebar.panelsById[id]
-    if (!panel) continue
-
-    const isTabsPanel = Utils.isTabsPanel(panel)
-    const isHidden =
-      panel.hidden ||
-      (isTabsPanel && Settings.state.hideEmptyPanels && !panel.reactive.len) ||
-      (isTabsPanel && Settings.state.hideDiscardedTabPanels && panel.allDiscarded)
-    if (isHidden) {
-      hiddenPanels.push(panel)
-      if (panel.id === selPanelId) {
-        actIndex = hiddenPanels.length - 1
-        actIsHidden = true
-      }
-    } else {
-      visiblePanels.push(panel)
-      if (panel.id === selPanelId) {
-        actIndex = visiblePanels.length - 1
-      }
-    }
-  }
-
-  if (actIndex === -1) return
-  if (hdnIndex === -1 || isInline) hdnIndex = visiblePanels.length
-
-  let panel
-  if (!actIsHidden) {
-    for (let i = actIndex + dir; i >= 0 || i < visiblePanels.length; i += dir) {
-      panel = visiblePanels[i]
-      newActIsHidden = false
-      if ((dir > 0 && i === hdnIndex) || (dir < 0 && i + 1 === hdnIndex)) {
-        if (hiddenPanels.length) {
-          Sidebar.openHiddenPanelsPopup()
-          if (dir > 0) panel = hiddenPanels[0]
-          else panel = hiddenPanels[hiddenPanels.length - 1]
-          newActIsHidden = true
-        }
-        break
-      }
-      if (!panel) break
-      break
-    }
-  } else {
-    for (let i = actIndex + dir; i >= 0 || i < hiddenPanels.length; i += dir) {
-      panel = hiddenPanels[i]
-      newActIsHidden = true
-      if (!panel) {
-        if (visiblePanels.length) {
-          panel = visiblePanels[dir > 0 ? hdnIndex : hdnIndex - 1]
-          if (!panel) break
-          if (hiddenPanelsPopupIsShown) Sidebar.reactive.hiddenPanelsPopup = false
-          newActIsHidden = false
-        }
-        break
-      }
-      break
-    }
-  }
-
-  if (newActIsHidden && !hiddenPanelsPopupIsShown) {
-    Sidebar.openHiddenPanelsPopup()
-  }
-
-  if (!panel) {
-    Selection.selectNavItem(selPanelId)
-    return
-  }
-
-  Selection.selectNavItem(panel.id)
 }
 
 export function openHiddenPanelsPopup(): void {
@@ -1819,12 +1714,22 @@ export function createTabsPanel(conf?: Partial<TabsPanelConfig>): TabsPanel {
   return panel
 }
 
-export function getIndexForNewTabsPanel(): number {
+export function getIndexForNewTabsPanel(append?: boolean): number {
   const activePanel = Sidebar.panelsById[Sidebar.activePanelId]
   let index = -1
+
+  if (append) {
+    index = Sidebar.reactive.nav.findLastIndex(id => {
+      const p = Sidebar.panelsById[id]
+      return !!(Utils.isTabsPanel(p) || Utils.isBookmarksPanel(p))
+    })
+    index++
+    return index
+  }
+
   if (Utils.isTabsPanel(activePanel)) index = activePanel.index
   else {
-    index = Utils.findLastIndex(Sidebar.reactive.nav, id => {
+    index = Sidebar.reactive.nav.findLastIndex(id => {
       return Utils.isTabsPanel(Sidebar.panelsById[id])
     })
     if (index === -1 && activePanel) index = activePanel.index
@@ -2635,7 +2540,7 @@ export function closeSubPanel() {
   if (Sidebar.subPanelType === SubPanelType.History && Sidebar.activePanelId !== 'history') {
     History.unloadAfter(30_000)
   } else if (Sidebar.subPanelType === SubPanelType.Sync && Sidebar.activePanelId !== 'sync') {
-    Sync.unloadAfter(30_000)
+    Sync.unloadAfter(5_000)
   }
 
   Sidebar.subPanelActive = false

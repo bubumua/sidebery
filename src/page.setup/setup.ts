@@ -16,8 +16,8 @@ import * as IPC from 'src/services/ipc'
 import * as Logs from 'src/services/logs'
 import { initSidebarConfig, loadSidebarConfig } from 'src/services/sidebar-config'
 import { setupSidebarConfigListeners } from 'src/services/sidebar-config'
-import { showUpgradingScreen } from 'src/services/upgrading'
 import { initPopups } from 'src/services/popups'
+import { Notifications } from 'src/services/notifications'
 
 async function main(): Promise<void> {
   Info.setInstanceType(InstanceType.setup)
@@ -36,6 +36,7 @@ async function main(): Promise<void> {
   SetupPage.reactive = reactive(SetupPage.reactive)
   Info.reactive = reactive(Info.reactive)
   Styles.reactive = reactive(Styles.reactive)
+  Notifications.reactive = reactive(Notifications.reactive)
 
   IPC.registerActions({
     storageChanged: Store.storageChangeListener,
@@ -61,11 +62,6 @@ async function main(): Promise<void> {
 
   const app = createApp(Root)
   app.mount('#root_container')
-
-  if (Info.isMajorUpgrade()) {
-    showUpgradingScreen()
-    return
-  }
 
   Settings.setupSettingsChangeListener()
 

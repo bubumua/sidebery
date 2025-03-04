@@ -136,10 +136,12 @@ export const DEFAULT_SETTINGS: SettingsState = {
 
   // Tabs preview
   previewTabs: false,
-  previewTabsMode: 'i',
-  previewTabsPageModeFallback: 'w',
+  previewTabsMode: 'p',
+  previewTabsPageModeFallback: 'n',
   previewTabsInlineHeight: 70,
   previewTabsPopupWidth: 280,
+  previewTabsTitle: 2,
+  previewTabsUrl: 1,
   previewTabsSide: 'right',
   previewTabsDelay: 500,
   previewTabsFollowMouse: true,
@@ -177,8 +179,6 @@ export const DEFAULT_SETTINGS: SettingsState = {
   theme: 'proton',
   density: 'default',
   colorScheme: 'ff',
-  sidebarCSS: false,
-  groupCSS: false,
 
   // Snapshots
   snapNotify: true,
@@ -219,6 +219,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   tabLongLeftClick: 'none',
   tabLongRightClick: 'none',
   tabMiddleClick: 'close',
+  tabPinnedMiddleClick: 'discard',
   tabMiddleClickCtrl: 'discard',
   tabMiddleClickShift: 'duplicate',
   tabCloseMiddleClick: 'close',
@@ -245,6 +246,8 @@ export const DEFAULT_SETTINGS: SettingsState = {
   syncName: '',
   syncUseFirefox: true,
   syncUseGoogleDrive: false,
+  syncUseGoogleDriveApi: false,
+  syncUseGoogleDriveApiClientId: '',
   syncSaveSettings: false,
   syncSaveCtxMenu: false,
   syncSaveStyles: false,
@@ -252,6 +255,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
 
   // Keybindings
   selectActiveTabFirst: true,
+  selectCyclic: false,
 }
 
 // prettier-ignore
@@ -275,6 +279,7 @@ export const SETTINGS_OPTIONS = {
   tabLongRightClick: ['reload', 'duplicate', 'dup_child', 'pin', 'mute', 'clear_cookies', 'new_after',
     'new_child', 'edit_title', 'none'],
   tabMiddleClick: ['close', 'discard', 'discard_or_close', 'duplicate', 'dup_child', 'none'],
+  tabPinnedMiddleClick: ['close', 'discard', 'discard_or_close', 'duplicate', 'unpin', 'none'],
   tabMiddleClickModifier: ['discard', 'discard_or_close', 'duplicate', 'dup_child', 'edit_title', 'none'],
   tabCloseMiddleClick: ['close', 'discard', 'discard_or_close'],
   tabsPanelLeftClickAction: ['prev', 'expand', 'parent', 'tab', 'none'],

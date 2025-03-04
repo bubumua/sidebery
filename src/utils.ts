@@ -126,9 +126,9 @@ export function deadline<T>(deadline: number, fallback: T, promise: Promise<T>):
 }
 
 /**
- * Bytes to readable string
+ * Converts number of bytes into readable string
  */
-export function bytesToStr(bytes: number): string {
+export function sizeToString(bytes: number): string {
   if (bytes < 1000) return `${bytes} b`
 
   const kb = bytes / 1024
@@ -152,7 +152,7 @@ export function bytesToStr(bytes: number): string {
  */
 export function strSize(str: string): string {
   const bytes = new Blob([str]).size
-  return bytesToStr(bytes)
+  return sizeToString(bytes)
 }
 
 export function uDate(ms: number, delimiter?: string, dayStartTime?: number): string {
@@ -498,14 +498,8 @@ export async function parseDragEvent(
 /**
  * Check if string is group url
  */
-export function isV4GroupUrl(url: string): boolean {
-  return url.startsWith('m') && url.startsWith('/group/group.html', 52)
-}
 export function isGroupUrl(url: string): boolean {
   return url.startsWith('m') && url.startsWith('/sidebery/group.html', 52)
-}
-export function isV4UrlUrl(url: string): boolean {
-  return url.startsWith('m') && url.startsWith('/url/url.html', 52)
 }
 export function isUrlUrl(url: string): boolean {
   return url.startsWith('m') && url.startsWith('/sidebery/url.html', 52)
@@ -582,6 +576,7 @@ export function normalizeUrl(url?: string, title?: string): string | undefined {
     url.startsWith('data:') ||
     url.startsWith('file:') ||
     url.startsWith('jar:file:') ||
+    url.startsWith('blob:') ||
     url.startsWith('about:')
   ) {
     if (title) return URL_URL + '#' + encodeURIComponent(JSON.stringify([url, title]))
@@ -596,8 +591,6 @@ export function normalizeUrl(url?: string, title?: string): string | undefined {
  */
 export function denormalizeUrl(url?: string): string | undefined {
   if (!url) return url
-  // Workaround for containered tabs
-  if (url.startsWith('about:blank#url')) return url.slice(15)
   // Unavailable URLs
   else if (url.startsWith('m') && URL_PAGE_RE.test(url)) {
     let data = url.slice(71)
@@ -606,7 +599,7 @@ export function denormalizeUrl(url?: string): string | undefined {
       const [url, _] = JSON.parse(data) as string[]
       return url
     } catch {
-      return data
+      return url
     }
   }
   // Ok
@@ -735,6 +728,20 @@ export function setSvgImageSize(base64img: string, w: number, h: number): string
   }
 
   return 'data:image/svg+xml;base64,' + base64
+}
+
+export function svgImageContainsCssMediaQueries(base64img: string): boolean {
+  if (!base64img.startsWith('data:image/svg+xml;base64,')) return false
+
+  const base64 = base64img.slice(26)
+
+  let svgText
+  try {
+    svgText = atob(base64)
+  } catch {
+    return false
+  }
+  return /@media\s*\(/.test(svgText)
 }
 
 export function strHash(str: string): number {
@@ -882,7 +889,7 @@ export function isRegExp(value: unknown): value is RegExp {
 }
 
 interface RetryConfig {
-  action: (again: () => void) => Promise<void>
+  action: (again: () => void, isLastTry: boolean) => Promise<void>
   interval: number
   count: number
   increment?: number
@@ -896,7 +903,7 @@ export async function retry(conf: RetryConfig): Promise<void> {
 
     while (count--) {
       let result = false
-      await conf.action(() => (result = true))
+      await conf.action(() => (result = true), count === 0)
 
       if (!result || count <= 0) break
 
@@ -1005,26 +1012,33 @@ export function isSubListTitle(something: any): something is SubListTitleInfo {
   return false
 }
 
-// Temp, (v104, esr115 (2023-09-26))
-export function findLast<T>(arr: T[], pred: (val: T, i: number) => unknown): T | undefined {
-  for (let i = arr.length, v; i--; ) {
+export function findFrom<T>(
+  arr: readonly T[],
+  index: number,
+  pred: (val: T, i: number) => unknown
+): T | undefined {
+  const len = arr.length
+  for (let i = index, v; i < len; i++) {
     v = arr[i]
     if (pred(v, i)) return v
   }
 }
-export function findLastIndex<T>(arr: T[], pred: (val: T, i: number) => unknown): number {
-  for (let i = arr.length, v; i--; ) {
+export function findLastFrom<T>(
+  arr: readonly T[],
+  index: number,
+  pred: (val: T, i: number) => unknown
+): T | undefined {
+  for (let i = index, v; i >= 0; i--) {
     v = arr[i]
-    if (pred(v, i)) return i
+    if (pred(v, i)) return v
   }
-  return -1
 }
 
 interface QueueItem {
   ok: (result: any) => void
   err: (error: any) => void
   fn: AnyAsyncFunc
-  args?: any[]
+  args: any[]
 }
 
 export class AsyncQueue {
@@ -1043,7 +1057,7 @@ export class AsyncQueue {
 
     this._waitingQueue = true
 
-    const result = args ? await fn(...args) : await fn()
+    const result = await fn(...args)
 
     if (this._queue.length) this._processQueue()
     else this._waitingQueue = false
@@ -1057,8 +1071,7 @@ export class AsyncQueue {
     while (nextTask) {
       try {
         /* eslint @typescript-eslint/no-unsafe-argument: off */
-        if (nextTask.args) nextTask.ok(await nextTask.fn(...nextTask.args))
-        else nextTask.ok(await nextTask.fn())
+        nextTask.ok(await nextTask.fn(...nextTask.args))
       } catch (err) {
         nextTask.err(err)
       }
@@ -1079,4 +1092,37 @@ export function getRandomFrom<T>(arr: T[]): T {
 
 export function settledOr<T>(result: PromiseSettledResult<T>, fallback: T): T {
   return result?.status === 'fulfilled' ? (result.value ?? fallback) : fallback
+}
+
+export class BenchAvrg {
+  private _deltas: number[] = []
+  private _timeout: number | undefined
+  private _prefix = 'AVRG:'
+  private _delay = 2500
+  private _start: number | undefined
+
+  constructor(prefix = 'AVRG:', delay = 2500) {
+    this._prefix = prefix
+    this._delay = delay
+  }
+
+  public start() {
+    this._start = performance.now()
+  }
+
+  public end() {
+    if (this._start === undefined) return
+
+    const delta = performance.now() - this._start
+    this._deltas.push(delta)
+    this._start = undefined
+
+    clearTimeout(this._timeout)
+    this._timeout = setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.info(this._prefix, this._deltas.reduce((a, n) => a + n, 0) / this._deltas.length)
+      this._deltas = []
+      this._start = undefined
+    }, this._delay)
+  }
 }

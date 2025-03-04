@@ -14,14 +14,19 @@ export interface TabPreviewInitData {
   url: string
   y: number
   dpr: number
+  sh: number
   popupWidth: number
   offsetY: number
   offsetX: number
   atTheLeft: boolean
   rCrop: number
+  tMax: number
+  uMax: number
 }
 
+const Y_OFFSET = -24
 const MARGIN = 2
+
 const state = {
   tabId: NOID,
   winId: NOID,
@@ -101,7 +106,7 @@ function setPreview(preview: string) {
 
 function setPopupPosition(y: number) {
   if (!state.popupEl) return
-  let newY = y + state.offsetY
+  let newY = y + state.offsetY + Y_OFFSET
   if (newY > state.maxY) newY = state.maxY
   else if (newY < state.minY) newY = state.minY
   state.popupEl.style.transform = `translateY(${newY}px)`
@@ -179,11 +184,14 @@ async function main() {
   window.sideberyInitData = undefined
   window.onSideberyInitDataReady = undefined
 
+  const sidebarHeight = initData.sh || window.innerHeight
+  const heightDifBetweenSidebarAndPage = window.innerHeight - sidebarHeight
+
   state.winId = initData.winId
   state.referenceDevicePixelRatio = initData.dpr
   state.previewWidth = initData.popupWidth
   state.previewHeight = calcPreviewHeight(initData.popupWidth)
-  state.offsetY = initData.offsetY
+  state.offsetY = initData.offsetY + heightDifBetweenSidebarAndPage
   state.offsetX = initData.offsetX
 
   previewConf.scale = calcScale(
@@ -229,6 +237,13 @@ async function main() {
     opacity: 0;
     transition: opacity .1s;
     transform-origin: 50% 0%;
+    text-align: start;
+    direction: ltr;
+    font-style: normal;
+    font-variant: normal;
+    text-transform: none;
+    visibility: visible;
+    white-space: normal;
 `
 
   // Create popup element
@@ -248,7 +263,7 @@ async function main() {
     background-color: var(--bg);
     overflow: hidden;
     color: var(--fg);
-    font-family: sans-serif;
+    font-family: system-ui;
     transition: background 1s;
 `
 
@@ -267,37 +282,57 @@ async function main() {
 `
 
   // Create title element
-  state.titleEl = document.createElement('div')
-  state.titleEl.classList.add('title')
-  headerEl.appendChild(state.titleEl)
-  state.titleEl.style.cssText = `
+  const maxTitleLines = initData.tMax
+  if (maxTitleLines > 0) {
+    state.titleEl = document.createElement('div')
+    state.titleEl.classList.add('title')
+    headerEl.appendChild(state.titleEl)
+    state.titleEl.style.cssText = `
     position: relative;
     margin: 6px 8px 4px;
     padding: 0;
     font-size: .875em;
     font-weight: 700;
     line-height: 1.2em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-`
+    overflow: hidden;`
+    if (maxTitleLines === 1) {
+      state.titleEl.style.cssText += `
+      text-overflow: ellipsis;
+      white-space: nowrap;`
+    } else {
+      state.titleEl.style.cssText += `
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: ${maxTitleLines};`
+    }
+  }
 
   // Create url element
-  state.urlEl = document.createElement('div')
-  state.urlEl.classList.add('url')
-  headerEl.appendChild(state.urlEl)
-  state.urlEl.style.cssText = `
-    position: relative;
-    margin: 0 8px 8px;
-    padding: 0;
-    font-size: .8125em;
-    font-weight: 400;
-    line-height: 1.2em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    opacity: .75;
-`
+  const maxUrlLines = initData.uMax
+  if (maxUrlLines > 0) {
+    state.urlEl = document.createElement('div')
+    state.urlEl.classList.add('url')
+    headerEl.appendChild(state.urlEl)
+    state.urlEl.style.cssText = `
+      position: relative;
+      margin: ${maxTitleLines > 0 ? '0' : '8px'} 8px 8px;
+      padding: 0;
+      font-size: .8125em;
+      font-weight: 400;
+      line-height: 1.2em;
+      overflow: hidden;
+      opacity: ${maxTitleLines ? '.75' : '1'};`
+    if (maxUrlLines === 1) {
+      state.urlEl.style.cssText += `
+      text-overflow: ellipsis;
+      white-space: nowrap;`
+    } else {
+      state.urlEl.style.cssText += `
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: ${maxUrlLines};`
+    }
+  }
 
   // Create preview box element
   const previewBoxEl = document.createElement('div')

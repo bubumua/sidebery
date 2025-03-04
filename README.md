@@ -29,13 +29,12 @@ Firefox extension for managing tabs and bookmarks in sidebar.
 
 ## Install
 
-**Stable** (v5.2.0):
-[Release page](https://github.com/mbnuqw/sidebery/releases/tag/v5.2.0) |
+**Stable** (v5.3.2):
+[Release page](https://github.com/mbnuqw/sidebery/releases/tag/v5.3.2) |
 [Addon page](https://addons.mozilla.org/firefox/addon/sidebery/) |
-[Install](https://addons.mozilla.org/firefox/downloads/file/4246774/sidebery-5.2.0.xpi) (reviewed by Mozilla)  
-**Nightly** (v5.2.0.9):
-[Release page](https://github.com/mbnuqw/sidebery/releases/tag/v5.2.0) |
-[Install](https://github.com/mbnuqw/sidebery/releases/download/v5.2.0/sidebery-5.2.0.9.xpi)
+[Install](https://addons.mozilla.org/firefox/downloads/file/4430159/sidebery-5.3.2.xpi) (reviewed by Mozilla)  
+**Nightly** (v5.3.2.4):
+[Install](https://github.com/mbnuqw/sidebery/releases/download/v5.3.2/sidebery-5.3.2.4.xpi)
 
 ## About
 
@@ -96,11 +95,21 @@ Run browser with Add-on: `npm run dev.run -- <firefox-executable>`
 
 ## Donate
 
-You can donate (only crypto options) to this project, which will motivate me to answer questions, fix reported bugs, implement requested features and generally will speed up development process.
+You can donate to this project, which will motivate me to answer questions, fix reported bugs, implement requested features and generally will speed up development process.
 
 You can also donate to resolving a specific issue (feature request or bug report). To do this, message me to [maxbadryzlov@gmail.com](mailto:maxbadryzlov@gmail.com), we discuss the issue and its possible resolution, and I'll spend my time on that issue after donation.
 
+To purchase cryptocurrency you can use any exchange services, e.g.: [buy.coingate.com](https://buy.coingate.com/), [www.coinbase.com](https://www.coinbase.com/), [www.binance.com](https://www.binance.com/en/crypto/buy), [www.kraken.com](https://www.kraken.com/), etc...
+
 Thank you.
+
+<details><summary><b> Payeer </b></summary>
+
+```
+P1128042154
+```
+
+</details>
 
 <details><summary><b> Bitcoin (BTC) </b></summary>
 
@@ -122,13 +131,23 @@ bc1q2drx3x5pfl0c68urwztvjrwgksg9u3l7mn4g4m
 
 </details>
 
-<details><summary><b> USDT (TRC20), USDC (TRC20) </b></summary>
+<details><summary><b> Tron (TRX), USDT (TRC20), USDC (TRC20) </b></summary>
 
 ```
 TJEdp1TnsN7Jfhfi9Db8yXKDK8NEUovCZb
 ```
 
 ![TJEdp1TnsN7Jfhfi9Db8yXKDK8NEUovCZb](https://github.com/mbnuqw/sidebery/assets/6276694/bbdefadc-3430-4537-94f1-447244d0e72f)
+
+</details>
+
+<details><summary><b> Litecoin (LTC) </b></summary>
+
+```
+ltc1qpv4c4kaahdzhcwzj8yyrwlvnfcw2hw5qpxqr62
+```
+
+![ltc1qpv4c4kaahdzhcwzj8yyrwlvnfcw2hw5qpxqr62](https://github.com/user-attachments/assets/4f1b550c-686e-4540-a5fe-04844cfb1326)
 
 </details>
 
@@ -139,6 +158,16 @@ GdWipUmnhdDa7kqkF3SJm5jTYqp3UsTdbcGCC1xLbVJf
 ```
 
 ![GdWipUmnhdDa7kqkF3SJm5jTYqp3UsTdbcGCC1xLbVJf](https://github.com/mbnuqw/sidebery/assets/6276694/09adb5aa-3c68-48a0-9f21-0201011638d8)
+
+</details>
+
+<details><summary><b> TON </b></summary>
+
+```
+UQAxwOfvZQz1YR4qieiE-J4wHiz3zrMXAyxDiRJQQXIDX8MH
+```
+
+![UQAxwOfvZQz1YR4qieiE-J4wHiz3zrMXAyxDiRJQQXIDX8MH](https://github.com/user-attachments/assets/d5fffa85-7546-4396-8ee1-4aa32299aa8b)
 
 </details>
 

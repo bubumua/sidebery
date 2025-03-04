@@ -139,6 +139,8 @@ export interface SettingsState {
   previewTabsPageModeFallback: (typeof SETTINGS_OPTIONS.previewTabsPageModeFallback)[number]
   previewTabsInlineHeight: number
   previewTabsPopupWidth: number
+  previewTabsTitle: number
+  previewTabsUrl: number
   previewTabsSide: (typeof SETTINGS_OPTIONS.previewTabsSide)[number]
   previewTabsDelay: number
   previewTabsFollowMouse: boolean
@@ -180,8 +182,6 @@ export interface SettingsState {
   density: (typeof SETTINGS_OPTIONS.density)[number]
   colorScheme: (typeof SETTINGS_OPTIONS.colorScheme)[number]
   style?: string // DEPR
-  sidebarCSS: boolean
-  groupCSS: boolean
 
   // Snapshots
   snapNotify: boolean
@@ -222,6 +222,7 @@ export interface SettingsState {
   tabLongLeftClick: (typeof SETTINGS_OPTIONS.tabLongLeftClick)[number]
   tabLongRightClick: (typeof SETTINGS_OPTIONS.tabLongRightClick)[number]
   tabMiddleClick: (typeof SETTINGS_OPTIONS.tabMiddleClick)[number]
+  tabPinnedMiddleClick: (typeof SETTINGS_OPTIONS.tabPinnedMiddleClick)[number]
   tabMiddleClickCtrl: (typeof SETTINGS_OPTIONS.tabMiddleClickModifier)[number]
   tabMiddleClickShift: (typeof SETTINGS_OPTIONS.tabMiddleClickModifier)[number]
   tabCloseMiddleClick: (typeof SETTINGS_OPTIONS.tabCloseMiddleClick)[number]
@@ -248,6 +249,8 @@ export interface SettingsState {
   syncName: string
   syncUseFirefox: boolean
   syncUseGoogleDrive: boolean
+  syncUseGoogleDriveApi: boolean
+  syncUseGoogleDriveApiClientId: string
   syncSaveSettings: boolean
   syncSaveCtxMenu: boolean
   syncSaveStyles: boolean
@@ -255,4 +258,5 @@ export interface SettingsState {
 
   // Keybindings
   selectActiveTabFirst: boolean
+  selectCyclic: boolean
 }

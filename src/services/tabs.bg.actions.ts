@@ -177,6 +177,7 @@ function onTabUpdated(tabId: ID, change: browser.tabs.ChangeInfo): void {
     return
   }
 
+  let groupScriptInjectionIsNeeded = false
   const tab = Tabs.byId[tabId]
   if (!tab) return
 
@@ -189,14 +190,20 @@ function onTabUpdated(tabId: ID, change: browser.tabs.ChangeInfo): void {
   }
 
   if (change.status !== undefined) {
-    if (change.status === 'complete' && tab.url[0] !== 'a' && !tab.internal) {
-      reloadTabFaviconDebounced(tab)
+    if (change.status === 'complete') {
+      if (tab.url[0] !== 'a' && !tab.internal) {
+        reloadTabFaviconDebounced(tab)
+      }
+      // Check if injection of group-page script is needed
+      if (tab.internal && !change.title && tab.title === GROUP_INITIAL_TITLE) {
+        groupScriptInjectionIsNeeded = true
+      }
     }
   }
 
-  // Inject group page script if internal page has initial title
+  // Check if injection of group-page script is needed
   if (change.title && tab.internal && !tab.discarded && change.title === GROUP_INITIAL_TITLE) {
-    injectGroupPageScript(tab.windowId, tabId)
+    groupScriptInjectionIsNeeded = true
   }
 
   if (
@@ -205,6 +212,11 @@ function onTabUpdated(tabId: ID, change: browser.tabs.ChangeInfo): void {
     !tab.internal
   ) {
     Favicons.saveFavicon(tab.url, change.favIconUrl)
+  }
+
+  // Inject group page script if internal page has initial title
+  if (groupScriptInjectionIsNeeded) {
+    injectGroupPageScript(tab.windowId, tabId)
   }
 
   Object.assign(tab, change)
@@ -257,7 +269,7 @@ function onTabActivated(info: browser.tabs.ActiveInfo): void {
   if (prevTab) prevTab.active = false
 
   // Update tab's url
-  if (tab.reloadOnActivation) {
+  if (tab?.reloadOnActivation) {
     tab.reloadOnActivation = undefined
     browser.tabs.reload(tab.id)
   }
@@ -469,6 +481,7 @@ export async function updateBgTabsTreeData(): Promise<void> {
       if (tabInfo.tid !== undefined) tab.parentId = tabInfo.tid
       if (tabInfo.ct) tab.customTitle = tabInfo.ct
       if (tabInfo.cc) tab.customColor = tabInfo.cc
+      if (tabInfo.f) tab.folded = true
       const parent = Tabs.byId[tab.parentId]
       if (parent) tab.lvl = parent.lvl + 1
     }

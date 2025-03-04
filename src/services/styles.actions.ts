@@ -567,11 +567,6 @@ export async function loadCustomSidebarCSS(): Promise<void> {
   Sidebar.recalcElementSizesDebounced()
 }
 
-export async function loadCustomGroupCSS(): Promise<void> {
-  const stored = await browser.storage.local.get<Stored>('groupCSS')
-  applyCustomCSS(stored.groupCSS)
-}
-
 /**
  * Update custom css
  */
@@ -617,43 +612,12 @@ export async function hasCustomCSS(): Promise<boolean> {
 }
 
 /**
- * Apply custom css and save it
+ * Save custom css
  */
-export function setCustomCSS(target: CustomCssTarget, css: string): void {
-  const fieldName = (target + 'CSS') as CustomCssFieldName
+export async function saveCustomCSS() {
+  await Store.set({ sidebarCSS: Styles.sidebarCSS, groupCSS: Styles.groupCSS })
 
-  let settingsChanged = false
-  if (fieldName === 'sidebarCSS') {
-    if (Styles.sidebarCSS === css) return
-    if (Settings.state.sidebarCSS !== !!css) settingsChanged = true
-    Styles.sidebarCSS = css
-    Settings.state.sidebarCSS = !!css
-  } else if (fieldName === 'groupCSS') {
-    if (Styles.groupCSS === css) return
-    if (Settings.state.groupCSS !== !!css) settingsChanged = true
-    Styles.groupCSS = css
-    Settings.state.groupCSS = !!css
-  }
-
-  if (settingsChanged) Settings.saveSettings()
-  Store.set({ [fieldName]: css })
-
-  if (Settings.state.syncSaveStyles) saveStylesToSync()
-}
-
-export function upgradeCustomStyles(stored: Stored, newStorage: Stored): void {
-  const legacyCSSVars = stored.cssVars ? convertVarsToCSS(stored.cssVars) : ''
-
-  let sidebarCSS = ''
-  if (stored.sidebarCSS) sidebarCSS = `/* OLD STYLES\n${stored.sidebarCSS}\n*/`
-  if (legacyCSSVars) sidebarCSS = legacyCSSVars + '\n\n' + sidebarCSS
-
-  let groupCSS = ''
-  if (stored.groupCSS) groupCSS = `/* OLD STYLES\n${stored.groupCSS}\n*/`
-  if (legacyCSSVars) groupCSS = legacyCSSVars + '\n\n' + groupCSS
-
-  newStorage.sidebarCSS = sidebarCSS
-  newStorage.groupCSS = groupCSS
+  if (Settings.state.syncSaveStyles) await saveStylesToSync()
 }
 
 export function convertVarsToCSS(vars: Record<string, string | null>): string {
@@ -717,29 +681,11 @@ export async function importStyles(styles: CustomStyles) {
     groupCSS: styles.groupCSS ?? '',
   })
 
-  let settingsChanged = false
-
-  const sidebarCSSEnabled = !!styles.sidebarCSS
-  if (Settings.state.sidebarCSS !== sidebarCSSEnabled) {
-    Settings.state.sidebarCSS = sidebarCSSEnabled
-    settingsChanged = true
-  }
-  Settings.state.sidebarCSS = !!styles.sidebarCSS
-
-  const groupCSSEnabled = !!styles.groupCSS
-  if (Settings.state.groupCSS !== groupCSSEnabled) {
-    Settings.state.groupCSS = groupCSSEnabled
-    settingsChanged = true
-  }
-  Settings.state.groupCSS = !!styles.groupCSS
-
   if (Info.isSidebar) {
     if (styles.sidebarCSS) applyCustomCSS(styles.sidebarCSS)
     else removeCustomCSS()
     Sidebar.recalcElementSizesDebounced()
   }
-
-  if (settingsChanged) Settings.saveSettings()
 }
 
 export function updateGlobalFontSize(): void {

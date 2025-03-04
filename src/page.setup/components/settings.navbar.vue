@@ -310,6 +310,8 @@ function disableBtn(index: number): void {
   if (panelConf) {
     const msg = getRmConfirmMsg(panelConf)
     if (msg && !window.confirm(msg)) return
+
+    delete SidebarConfigRState.panels[panelConf.id]
   }
 
   SidebarConfigRState.nav.splice(index, 1)

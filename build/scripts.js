@@ -1,10 +1,10 @@
 /* eslint no-console: off */
-const path = require('path')
-const fs = require('fs')
-const esbuild = require('esbuild')
-const { parse, compileTemplate, compileScript } = require('@vue/compiler-sfc')
-const { IS_DEV, ADDON_PATH, VUE_DIST } = require('./utils')
-const { treeToList, getTSConfig, colorize, watch, log, logOk, logErr } = require('./utils')
+import path from 'path'
+import fs from 'fs'
+import esbuild from 'esbuild'
+import { parse, compileTemplate, compileScript } from '@vue/compiler-sfc'
+import { IS_DEV, ADDON_PATH, VUE_DIST } from './utils.js'
+import { treeToList, getTSConfig, colorize, watch, log, logOk, logErr } from './utils.js'
 
 const forChromium = process.argv.includes('--chromium')
 const SRC_DIR = './src'
@@ -295,8 +295,10 @@ async function main() {
         'src/sidebar/sidebar.ts',
         'src/page.setup/setup.ts',
         'src/popup.sync/sync.ts',
+        'src/popup.panel-config/panel-config.ts',
         'src/popup.proxy/proxy.ts',
         'src/popup.search/search.ts',
+        'src/popup.editing/editing.ts',
         'src/_locales/dict.common.ts',
         'src/_locales/dict.sidebar.ts',
         'src/_locales/dict.setup-page.ts',
@@ -309,8 +311,9 @@ async function main() {
     const buildingBundledScripts = esbuild.build({
       ...PROD_ESBUILD_BASE_CONF,
       entryPoints: [
-        'src/injections/playMedia.ts',
-        'src/injections/pauseMedia.ts',
+        'src/injections/play-media.ts',
+        'src/injections/pause-media.ts',
+        'src/injections/check-paused-media.ts',
         'src/injections/group.ts',
         'src/injections/url.ts',
       ],

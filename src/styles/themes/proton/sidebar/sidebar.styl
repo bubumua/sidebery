@@ -6,7 +6,6 @@ vendors = official
 @import '../btn'
 @import '../animations'
 @import '../inputs'
-@import '../upgrade-screen'
 
 @import './scroll-box'
 @import './tab'
@@ -20,6 +19,7 @@ vendors = official
 @import './panel.bookmarks'
 @import './panel.history'
 @import './panel.sync'
+@import './panel.sync.entry'
 @import './popup'
 @import './popup.windows'
 @import './popup.confirm'
@@ -51,6 +51,7 @@ body
   -moz-osx-font-smoothing: grayscale
   padding: 0
   margin: 0
+  font-family: system-ui
 
   a
     text-decoration: none
@@ -240,12 +241,19 @@ body
       opacity: .3
 .BottomBar[data-with-ntb="true"] .tool-btn
   width: var(--bottom-bar-height)
+.Sidebar[data-syncing="true"] .BottomBar .tool-btn.-sync svg
+  animation: syncing-animation 1s linear infinite
+.BottomBar .dnd-layer
+  height: calc(100% + var(--general-margin))
 
 .BottomBar[data-drop-target-bookmarks="true"]
+.BottomBar[data-drop-target-sync="true"]
   z-index: 300
 .BottomBar[data-drop-target-bookmarks="true"] .tool-btn
+.BottomBar[data-drop-target-sync="true"] .tool-btn
   opacity: 0
 .BottomBar[data-drop-target-bookmarks="true"] .tool-btn.-bookmarks
+.BottomBar[data-drop-target-sync="true"] .tool-btn.-sync
   opacity: 1
   background-color: var(--frame-el-bg, var(--frame-bg))
   box-shadow: var(--frame-el-shadow, var(--active-el-shadow))
@@ -420,6 +428,12 @@ for i in 1..16
   100%
     opacity: 0
     transform: rotateZ(45deg) scale(2, 2)
+
+@keyframes syncing-animation
+  0%
+    transform: rotateZ(0deg)
+  100%
+    transform: rotateZ(360deg)
 
 .dbg
   position: absolute

@@ -1,10 +1,10 @@
 import { translate } from 'src/dict'
 import * as Utils from 'src/utils'
-import { NOID, CONTAINER_ID, DEFAULT_CONTAINER, GROUP_URL, TABS_PANEL_CONFIG } from 'src/defaults'
-import { URL_URL, V4_GROUP_URL_LEN, V4_URL_URL_LEN, GROUP_URL_LEN, URL_URL_LEN } from 'src/defaults'
+import { NOID, CONTAINER_ID, GROUP_URL, TABS_PANEL_CONFIG } from 'src/defaults'
+import { URL_URL, GROUP_URL_LEN, URL_URL_LEN } from 'src/defaults'
 import { Snapshot, SnapTab, NormalizedSnapshot, SnapExportTypes, SnapExportInfo } from 'src/types'
 import { RemovingSnapshotResult, SnapPanelState, SnapStoreMode, SnapTabState } from 'src/types'
-import { Stored, Notification, Snapshot_v4, SnapWindowState, SnapshotState } from 'src/types'
+import { Stored, Notification, SnapWindowState, SnapshotState } from 'src/types'
 import * as Logs from 'src/services/logs'
 import { Settings } from 'src/services/settings'
 import { Windows } from 'src/services/windows'
@@ -19,7 +19,7 @@ import { DEFAULT_CONTAINER_ID } from 'src/defaults/containers'
 import { PanelType } from 'src/types/sidebar'
 import { ItemInfo } from 'src/types/tabs'
 import { Info } from './info'
-import { createDefaultSidebarConfig, getSidebarConfigFromV4 } from './sidebar-config'
+import { createDefaultSidebarConfig } from './sidebar-config'
 
 export const MAX_SIZE_LIMIT = 10_240
 const MIN_SNAP_INTERVAL = 60_000
@@ -30,6 +30,8 @@ const GLOB_PINNED_ID = 'global_pinned'
  * Create base snapshot
  */
 export async function createSnapshot(auto = false): Promise<Snapshot | undefined> {
+  Logs.info('Snapshots.createSnapshot', auto)
+
   if (!Info.isBg) return await IPC.bg('createSnapshot')
 
   // Get snapshot src data and current snapshots list
@@ -71,6 +73,7 @@ export async function createSnapshot(auto = false): Promise<Snapshot | undefined
         snapTab.pinned = true
         if (Settings.state.pinnedTabsPosition !== 'panel') snapTab.panelId = -1
       }
+      if (tab.folded) snapTab.folded = true
       if (tab.cookieStoreId !== CONTAINER_ID) snapTab.containerId = tab.cookieStoreId
       if (tab.customTitle) snapTab.customTitle = tab.customTitle
       if (tab.customColor) snapTab.customColor = tab.customColor
@@ -301,6 +304,7 @@ export function minimizeSnapshot(snapshots: Snapshot[], snapshot: Snapshot): voi
             tab.containerId === tabN.containerId &&
             tab.panelId === tabN.panelId &&
             tab.lvl === tabN.lvl &&
+            tab.folded === tabN.folded &&
             tab.customTitle === tabN.customTitle &&
             tab.customColor === tabN.customColor
           ) {
@@ -442,8 +446,6 @@ async function adaptContainers(snapshot: NormalizedSnapshot): Promise<void> {
       return c.name === container.name && c.icon === container.icon && c.color === container.color
     })
 
-    Containers.updateReopeningRules(container)
-
     // Create new container
     if (!currentContainer) {
       const newContainer = await Containers.create(container.name, container.color, container.icon)
@@ -544,6 +546,8 @@ async function adaptTabsPanels(snapshot: NormalizedSnapshot): Promise<void> {
  * Open windows (all or by index) of snapshot
  */
 export async function openWindows(snapshot: NormalizedSnapshot, winIndex?: number): Promise<void> {
+  Logs.info('Snapshots.openWindows')
+
   // Adapt containers
   await adaptContainers(snapshot)
 
@@ -564,6 +568,8 @@ export async function openWindows(snapshot: NormalizedSnapshot, winIndex?: numbe
  * Open window of snapshot
  */
 async function openWindow(snapshot: NormalizedSnapshot, winIndex: number): Promise<void> {
+  Logs.info('Snapshots.openWindow')
+
   const winTabs = snapshot.tabs[winIndex]
   if (!winTabs) return Logs.warn('Snapshots.openWindow: No winTabs')
 
@@ -577,9 +583,10 @@ async function openWindow(snapshot: NormalizedSnapshot, winIndex: number): Promi
 
       const tabInfo: ItemInfo = {
         id: index++,
-        url: tab.url,
+        url: Utils.normalizeUrl(tab.url),
         title: tab.title,
         parentId: NOID,
+        folded: tab.folded,
         panelId: tab.panelId ?? NOID,
         container: tab.containerId ?? DEFAULT_CONTAINER_ID,
       }
@@ -776,123 +783,6 @@ export function parseSnapshot(
     winCount,
     tabsCount,
   }
-}
-
-export function isV4(snapshots?: Snapshot_v4[] | Snapshot[]): snapshots is Snapshot_v4[] {
-  if (!snapshots) return false
-
-  const first = snapshots[0]
-  if (!first) return false
-
-  return !!(first as Snapshot_v4).containersById
-}
-
-export function convertFromV4(oldSnapshots: Snapshot_v4[]): Snapshot[] {
-  const result: Snapshot[] = []
-
-  for (const snapshotV4 of oldSnapshots) {
-    if (!snapshotV4.windows) continue
-
-    const snapshot: NormalizedSnapshot = {
-      id: snapshotV4.id ?? Math.random().toString(36).replace('0.', Date.now().toString(36)),
-      time: snapshotV4.time ?? Date.now(),
-      containers: {},
-      sidebar: { nav: [], panels: {} },
-      tabs: [],
-    }
-
-    // Containers
-    if (snapshotV4.containersById) {
-      for (const ctrV4 of Object.values(snapshotV4.containersById)) {
-        if (ctrV4.id === undefined) continue
-        const ctr = Utils.cloneObject(DEFAULT_CONTAINER)
-        ctr.id = ctr.cookieStoreId = ctrV4.id
-        ctr.name = ctrV4.name ?? ''
-        ctr.color = ctrV4.color ?? 'toolbar'
-        ctr.icon = ctrV4.icon ?? 'fingerprint'
-        snapshot.containers[ctr.id] = ctr
-      }
-    }
-
-    // Nav and panels
-    let defaultPanelId = NOID
-    if (snapshotV4.panels) {
-      const defaultPanel = snapshotV4.panels.find(p => p.type === 'default')
-      defaultPanelId = defaultPanel?.id ?? 'firefox-default'
-      snapshot.sidebar = getSidebarConfigFromV4(snapshotV4.panels)
-    }
-
-    // Tabs
-    for (const winV4 of Object.values(snapshotV4.windows)) {
-      if (!winV4.items?.length) continue
-
-      const win: SnapTab[][] = []
-      let panelTabs: SnapTab[] | undefined
-      let targetGroup: ID | undefined
-
-      for (const tabV4 of winV4.items) {
-        if (tabV4.url === undefined) continue
-
-        const snapTab: SnapTab = { url: tabV4.url, title: tabV4.title ?? '', panelId: NOID }
-        if (tabV4.panel) snapTab.panelId = tabV4.panel
-        else snapTab.panelId = defaultPanelId
-        if (tabV4.lvl) snapTab.lvl = tabV4.lvl
-        if (tabV4.pinned) snapTab.pinned = true
-        if (tabV4.ctr && tabV4.ctr !== CONTAINER_ID) snapTab.containerId = tabV4.ctr
-
-        // Update group url
-        if (Utils.isV4GroupUrl(snapTab.url)) {
-          let titleEndIndex: number | undefined = snapTab.url.indexOf(':id:', V4_GROUP_URL_LEN)
-          if (titleEndIndex === -1) titleEndIndex = undefined
-          const newUrl = GROUP_URL + snapTab.url.slice(V4_GROUP_URL_LEN, titleEndIndex)
-          snapTab.url = newUrl
-        }
-
-        // Update url-placeholder url
-        if (Utils.isV4UrlUrl(snapTab.url)) {
-          const newUrl = URL_URL + snapTab.url.slice(V4_URL_URL_LEN)
-          snapTab.url = newUrl
-        }
-
-        // Check panel
-        if (snapTab.panelId !== -1) {
-          const panelConf = snapshot.sidebar.panels[snapTab.panelId]
-          if (!panelConf) snapTab.panelId = -1
-        }
-
-        // Check container
-        if (snapTab.containerId) {
-          const containerConf = snapshot.containers[snapTab.containerId]
-          if (!containerConf) delete snapTab.containerId
-        }
-
-        // Pinned tabs
-        if (snapTab.pinned && targetGroup !== 'pinned') {
-          panelTabs = []
-          win.push(panelTabs)
-          targetGroup = 'pinned'
-        }
-
-        // Tabs by panel
-        if (!snapTab.pinned && targetGroup !== snapTab.panelId) {
-          panelTabs = []
-          win.push(panelTabs)
-          targetGroup = snapTab.panelId
-        }
-
-        if (panelTabs) panelTabs.push(snapTab)
-      }
-
-      snapshot.tabs.push(win)
-    }
-
-    // Minimize
-    minimizeSnapshot(result, snapshot)
-
-    result.push(snapshot)
-  }
-
-  return result
 }
 
 export function updateInternalUrls(snapshot: NormalizedSnapshot): void {

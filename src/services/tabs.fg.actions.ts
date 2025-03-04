@@ -156,17 +156,17 @@ export async function load(): Promise<void> {
   Tabs.setupTabsListeners()
 
   await Utils.retry({
-    action: async again => {
+    action: async (again, isLastTry) => {
       try {
-        await restoreTabsState()
+        await restoreTabsState(isLastTry)
       } catch (err) {
         if (err === Err.TabsLocked) again()
         else Logs.err('Tabs.load: Cannot restore tabs state', err)
       }
     },
-    interval: 1000,
-    increment: 500,
-    count: 5,
+    interval: 500,
+    increment: 250,
+    count: 10,
   })
 
   Tabs.updateActiveGroupPage()
@@ -256,25 +256,41 @@ export function unload(): void {
   Tabs.loadInShadowMode()
 }
 
-async function restoreTabsState(): Promise<void> {
+async function restoreTabsState(ignoreLockedTabs?: boolean): Promise<void> {
   if (!Sidebar.hasTabs) return
 
   const ts = performance.now()
   Logs.info('Tabs.restoreTabsState')
 
+  let isWindowTabsLocked
+  if (!ignoreLockedTabs) {
+    try {
+      isWindowTabsLocked = await IPC.bg('isWindowTabsLocked', Windows.id)
+    } catch {
+      isWindowTabsLocked = true
+    }
+  }
+
+  // Check if tabs are locked (sidebery is opening this window)
+  if (isWindowTabsLocked === true) {
+    Logs.info('Tabs.restoreTabsState: window tabs are locked (still opening?)')
+    throw Err.TabsLocked
+  }
+
+  // Clear deferredEventHandling
+  Tabs.deferredEventHandling = []
+
   const results = await Promise.allSettled([
     browser.tabs.query({ windowId: browser.windows.WINDOW_ID_CURRENT }),
     browser.storage.local.get<Stored>('tabsDataCache'),
-    IPC.bg('isWindowTabsLocked', Windows.id),
   ])
   const nativeTabs = Utils.settledOr(results[0], [])
   const storage = Utils.settledOr(results[1], {})
-  const isWindowTabsLocked = Utils.settledOr(results[2], false)
   let tabsWasMoved = false
 
-  // Check if tabs are locked right now
+  // Check if tabs were locked (sidebery opened this window)
   if (isWindowTabsLocked) {
-    if (isWindowTabsLocked === true) throw Err.TabsLocked
+    Logs.info('Tabs.restoreTabsState: window tabs were locked')
     storage.tabsDataCache = [isWindowTabsLocked.cache]
     tabsWasMoved = isWindowTabsLocked.move
   }
@@ -597,11 +613,31 @@ export function cacheTabsData(delay = 300): void {
 }
 let cacheTabsDataTimeout: number | undefined
 
+const saveTabDataTimeouts = new Map<ID, number>()
+
 /**
  * Save tab data to its session storage
  */
-export function saveTabData(tabId: ID, forced?: boolean): void {
+export function saveTabData(tabId: ID, forced?: boolean, delay?: number): void {
   // Logs.info('Tabs.saveTabData', tabId)
+  const timeout = saveTabDataTimeouts.get(tabId)
+  clearTimeout(timeout)
+
+  if (delay) {
+    saveTabDataTimeouts.set(
+      tabId,
+      setTimeout(() => {
+        saveTabDataTimeouts.delete(tabId)
+        _saveTabData(tabId, forced)
+      }, delay)
+    )
+  } else {
+    saveTabDataTimeouts.delete(tabId)
+    _saveTabData(tabId, forced)
+  }
+}
+
+function _saveTabData(tabId: ID, forced?: boolean): void {
   const tab = Tabs.byId[tabId]
   if (!tab) return
 
@@ -1297,7 +1333,7 @@ export async function duplicateTabs(tabIds: ID[], asChild?: boolean): Promise<vo
         if (t.lvl <= tab.lvl) break
 
         if (tabIds.includes(t.id)) {
-          const dupAncestorId = Tabs.findAncestor(t.id, id => tabIds.includes(id))
+          const dupAncestorId = Tabs.findAncestorId(t.id, id => tabIds.includes(id))
           if (dupAncestorId !== undefined) {
             descendantsToDuplicate.push([t.id, dupAncestorId])
             processed.push(t.id)
@@ -1323,7 +1359,7 @@ export async function duplicateTabs(tabIds: ID[], asChild?: boolean): Promise<vo
   }
 }
 
-export function findAncestor(tabId: ID, cb: (ancestorId: ID) => boolean): ID | void {
+export function findAncestorId(tabId: ID, cb: (ancestorId: ID) => boolean): ID | void {
   const tab = Tabs.byId[tabId]
   if (!tab) throw 'Tabs.getAncestors: No target tab'
 
@@ -2046,6 +2082,7 @@ export function getTabsTreeData(): TabsTreeData {
       else data.pid = tab.panelId
     }
     if (tab.parentId !== NOID) data.tid = tab.parentId
+    if (tab.isParent && tab.folded) data.f = 1
     if (tab.customTitle) data.ct = tab.customTitle
     if (tab.customColor) data.cc = tab.customColor
 
@@ -2080,30 +2117,33 @@ const enum SuccessorSearchMode {
  * Find successor tab (tab that will be activated
  * after removing currenly active tab)
  */
-export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
+export function findSuccessorTab(tab: Tab, exclude?: readonly ID[]): Tab | undefined {
   // Logs.info('Tabs.findSuccessorTab', tab.id, exclude)
   let target
   const tree = Settings.state.tabsTree
-  const rmFolded = Settings.state.rmChildTabs === 'folded'
-  const rmChild = Settings.state.rmChildTabs === 'all'
   const skipFolded = Settings.state.activateAfterClosingNoFolded
   const skipDiscarded = Settings.state.activateAfterClosingNoDiscarded
-  const dirNext = Settings.state.activateAfterClosing === 'next'
-  const dirPrev = Settings.state.activateAfterClosing === 'prev'
+  const dirNext = Settings.activateAfterClosingNext
+  const dirPrev = Settings.activateAfterClosingPrev
   const stayInPanel = Settings.state.activateAfterClosingStayInPanel
-
-  if (Tabs.removingTabs && !exclude) exclude = Tabs.removingTabs
 
   if (tab.pinned && (dirNext || dirPrev)) {
     let discardedFallback: Tab | undefined
     const pinInPanels = Settings.state.pinnedTabsPosition === 'panel'
     const dirDir = dirNext ? 1 : -1
     const opDir = dirDir * -1
-    if (Tabs.byId[tab.relGroupId]) target = Tabs.byId[tab.relGroupId]
+    if (Tabs.byId[tab.relGroupId]) {
+      target = Tabs.byId[tab.relGroupId]
+      if (exclude && target && exclude.includes(target.id)) {
+        target = undefined
+      }
+    }
     // Search in pinned tabs after active
     if (!target) {
       for (let foundTab, i = tab.index + dirDir; (foundTab = Tabs.list[i]); i += dirDir) {
         if (!foundTab?.pinned) break
+        if (foundTab.removing) continue
+        if (exclude && exclude.includes(foundTab.id)) continue
 
         // Skip discarded tab
         if (skipDiscarded && foundTab.discarded) {
@@ -2111,14 +2151,15 @@ export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
           continue
         }
 
-        if (pinInPanels && foundTab.panelId === tab.panelId) target = foundTab
-        else if (!pinInPanels) target = foundTab
+        if (foundTab.panelId === tab.panelId || !pinInPanels) target = foundTab
       }
     }
     // Search in pinned tabs before active
     if (!target) {
       for (let foundTab, i = tab.index + opDir; (foundTab = Tabs.list[i]); i += opDir) {
         if (!foundTab?.pinned) break
+        if (foundTab.removing) continue
+        if (exclude && exclude.includes(foundTab.id)) continue
 
         // Skip discarded tab
         if (skipDiscarded && foundTab.discarded) {
@@ -2126,8 +2167,7 @@ export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
           continue
         }
 
-        if (pinInPanels && foundTab.panelId === tab.panelId) target = foundTab
-        else if (!pinInPanels) target = foundTab
+        if (foundTab.panelId === tab.panelId || !pinInPanels) target = foundTab
       }
     }
     // Search in current panel
@@ -2136,14 +2176,17 @@ export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
       if (pinInPanels) panel = Sidebar.panelsById[tab.panelId]
       else panel = Sidebar.panelsById[Sidebar.activePanelId]
       if (Utils.isTabsPanel(panel)) {
-        for (const tab of panel.tabs) {
+        for (const t of panel.tabs) {
+          if (t.removing) continue
+          if (exclude && exclude.includes(t.id)) continue
+
           // Skip discarded tab
-          if (skipDiscarded && tab.discarded) {
-            if (!discardedFallback) discardedFallback = tab
+          if (skipDiscarded && t.discarded) {
+            if (!discardedFallback) discardedFallback = t
             continue
           }
 
-          target = tab
+          target = t
           break
         }
       }
@@ -2156,34 +2199,39 @@ export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
         const actTabs = prevTabsPanelHistory.actTabs
         const prevActTab = Tabs.byId[actTabs[actTabs.length - 1]]
         if (prevActTab && prevActTab.panelId === panelId && !prevActTab.discarded) {
-          return prevActTab
+          if (!exclude || !exclude.includes(prevActTab.id)) return prevActTab
         }
       }
     }
     // Search in global scope
     if (!target) {
-      for (const tab of Tabs.list) {
+      for (const t of Tabs.list) {
+        if (t.removing) continue
+        if (exclude && exclude.includes(t.id)) continue
+
         // Skip discarded tab
-        if (skipDiscarded && tab.discarded) {
-          if (!discardedFallback) discardedFallback = tab
+        if (skipDiscarded && t.discarded) {
+          if (!discardedFallback) discardedFallback = t
           continue
         }
 
-        target = tab
+        target = t
         break
       }
     }
+
+    if (exclude && target && exclude.includes(target.id)) return discardedFallback
 
     return target ?? discardedFallback
   }
 
   // If group tab linked with pinned tab switch to that pinned tab
-  if (tab.url.startsWith(GROUP_URL)) {
+  if (tab.isGroup) {
     const urlInfo = new URL(tab.url)
     const pin = urlInfo.searchParams.get('pin')
     if (pin) {
       const [containerId, url] = pin.split('::')
-      target = Tabs.list.find(t => t.pinned && t.cookieStoreId === containerId && t.url === url)
+      target = Tabs.pinned.find(t => t.cookieStoreId === containerId && t.url === url)
       if (target) return target
     }
   }
@@ -2236,6 +2284,7 @@ export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
                 if (!discardedFallback) discardedFallback = Tabs.byId[pTab.id]
                 continue
               }
+              if (pTab.removing) continue
               if (exclude && exclude.includes(pTab.id)) continue
               target = Tabs.byId[pTab.id]
               break mainLoop
@@ -2246,13 +2295,19 @@ export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
           }
 
           // Check the last active tab of the previous active tabs panel
-          const prevTabsPanelHistory = Tabs.getActiveTabsHistory(Sidebar.lastTabsPanelId)
-          if (prevTabsPanelHistory?.actTabs.length) {
-            const panelId = Sidebar.lastTabsPanelId
-            const actTabs = prevTabsPanelHistory.actTabs
-            const prevActTab = Tabs.byId[actTabs[actTabs.length - 1]]
-            if (prevActTab && prevActTab.panelId === panelId && !prevActTab.discarded) {
-              return prevActTab
+          if (tab.panelId !== Sidebar.lastTabsPanelId) {
+            const prevTabsPanelHistory = Tabs.getActiveTabsHistory(Sidebar.lastTabsPanelId)
+            if (prevTabsPanelHistory?.actTabs.length) {
+              const panelId = Sidebar.lastTabsPanelId
+              const actTabs = prevTabsPanelHistory.actTabs
+              const prevActTabId = actTabs.findLast(id => {
+                const tab = Tabs.byId[id]
+                return tab && tab.panelId === panelId && !tab.discarded
+              })
+              const prevActTab = Tabs.byId[prevActTabId ?? NOID]
+              if (prevActTab) {
+                return prevActTab
+              }
             }
           }
 
@@ -2280,14 +2335,17 @@ export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
     if (dir === 1) downI++
     else upI--
 
+    // Next tab is in removing process
+    if (foundTab.removing) continue
+
     // Next tab excluded
     if (exclude && exclude.includes(foundTab.id)) continue
 
     // Invisible(folded) tab will be removed too
-    if (rmFolded && foundTab.invisible) continue
+    if (Settings.rmChildTabsFolded && foundTab.invisible) continue
 
     // Child tab will be removed too
-    if (rmChild && foundTab.lvl > tab.lvl) continue
+    if (Settings.rmChildTabsAll && foundTab.lvl > tab.lvl) continue
 
     // Prev tab is invisible
     if (dir === -1 && foundTab.invisible) {
@@ -2306,7 +2364,7 @@ export function findSuccessorTab(tab: Tab, exclude?: ID[]): Tab | undefined {
   }
 
   // Previously active tab
-  if (Settings.state.activateAfterClosing === 'prev_act') {
+  if (Settings.activateAfterClosingPrevAct) {
     let history: ActiveTabsHistory
     if (Settings.state.activateAfterClosingGlobal) {
       history = Tabs.activeTabsGlobal
@@ -2408,7 +2466,7 @@ export function tabFlip() {
   }
 
   const history = Tabs.getActiveTabsHistory(panelId)
-  const prevTabId = Utils.findLast(history.actTabs, id => {
+  const prevTabId = history.actTabs.findLast(id => {
     const tab = Tabs.byId[id]
     if (Settings.state.tabsSecondClickActPrevNoUnload && tab?.discarded) return false
     return id !== Tabs.activeId
@@ -2516,6 +2574,14 @@ export function forEachDescendant(rootTab: Tab, cb: (t: Tab) => void) {
   while (child && child.lvl > rootLvl) {
     cb(child)
     child = Tabs.list[index++]
+  }
+}
+
+export function findAncestor(childTab: Tab, cb: (t: Tab) => any): Tab | undefined {
+  let parent = Tabs.byId[childTab.parentId]
+  while (parent) {
+    if (cb(parent)) return parent
+    parent = Tabs.byId[parent.parentId]
   }
 }
 
@@ -2639,6 +2705,7 @@ export function switchToRecentlyActiveTab(scope = SwitchingTabScope.global, dir:
         Sidebar.activatePanel(tab.panelId)
       }
 
+      Logs.info('Tabs.switchToRecentlyActiveTab', tabId)
       browser.tabs.update(tabId, { active: true }).catch(err => {
         Logs.err('Tabs.switchToRecentlyActiveTab: Cannot activate tab:', err)
       })
@@ -2688,8 +2755,8 @@ export function getTooltip(tab: Tab): string {
 }
 
 let updateSuccesionTimeout: number | undefined
-export function updateSuccessionDebounced(delay: number, exclude?: ID[]) {
-  if (Settings.state.activateAfterClosing === 'none') return
+export function updateSuccessionDebounced(delay: number, exclude?: readonly ID[]) {
+  if (Settings.activateAfterClosingNone) return
 
   clearTimeout(updateSuccesionTimeout)
 
@@ -2698,17 +2765,33 @@ export function updateSuccessionDebounced(delay: number, exclude?: ID[]) {
   updateSuccesionTimeout = setTimeout(() => updateSuccession(exclude), delay)
 }
 
-function updateSuccession(exclude?: ID[]) {
+function updateSuccession(exclude?: readonly ID[]) {
+  let firstSuccessor: Tab | undefined
+
+  if (Tabs.list.length < 2) return
+
   const activeTab = Tabs.byId[Tabs.activeId]
   if (activeTab) {
-    const target = Tabs.findSuccessorTab(activeTab, exclude)
-    // Logs.info('Tabs.updateSuccession: active, target', activeTab.id, target?.id)
-    if (target) {
-      browser.tabs.moveInSuccession([activeTab.id], target.id).catch(err => {
-        Logs.err('Tabs.updateSuccession: Cannot update succession:', err)
+    const suc = [activeTab.id]
+    firstSuccessor = Tabs.findSuccessorTab(activeTab, exclude)
+    if (firstSuccessor) {
+      activeTab.successorTabId = firstSuccessor.id
+      if (firstSuccessor.id !== activeTab.id) suc.push(firstSuccessor.id)
+
+      if (!exclude) {
+        const secondSuccessor = Tabs.findSuccessorTab(firstSuccessor, suc)
+        if (secondSuccessor && secondSuccessor.id !== activeTab.id) {
+          suc.push(secondSuccessor.id)
+        }
+      }
+    }
+
+    if (suc.length > 1) {
+      browser.tabs.moveInSuccession(suc).catch(err => {
+        Logs.err('Tabs.updateSuccession: Cannot update succession:', err, suc)
       })
-      activeTab.successorTabId = target.id
-      return target
     }
   }
+
+  return firstSuccessor
 }

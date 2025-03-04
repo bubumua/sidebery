@@ -5,8 +5,8 @@
   --bookmarks-bookmark-height: 30px
   --bookmarks-folder-height: 30px
   --bookmarks-separator-height: 17px
-  --bookmarks-bookmark-font: rem(15) sans-serif
-  --bookmarks-folder-font: rem(15) sans-serif
+  --bookmarks-bookmark-font: rem(15) system-ui
+  --bookmarks-folder-font: rem(15) system-ui
   --bookmarks-margin: var(--general-margin)
   --bookmarks-border-radius: var(--general-border-radius)
   --bookmarks-inner-gap: 6px
@@ -97,6 +97,9 @@
 .BookmarkNode > .body:active:before
   background-color: var(--frame-el-overlay-clicked-bg)
   opacity: 1
+
+.BookmarkNode.-middle-click > .body
+  animation: middle-click-animation .2s
 
 .BookmarkNode[data-selected="true"] > .body:before
   background-color: var(--frame-el-overlay-selected-bg)

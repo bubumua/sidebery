@@ -2,10 +2,94 @@
 
 ## Unreleased
 
+### Fixed
+
+- Recently closed tabs (sub-panel): close it right after dnd start
+- Tab preview: vertical positioning (in-page popup)  
+- Tabs: parentId is not specified when auto-reopening tab on request (resolves [#2009](https://github.com/mbnuqw/sidebery/issues/2009))  
+- SetupPage/navbar: rm non-panel element with "x" button (resolves [#2018](https://github.com/mbnuqw/sidebery/issues/2018))  
+- Panel config: custom icon: file (resolves [#2015](https://github.com/mbnuqw/sidebery/issues/2015))  
+
+### Localization
+
+- Grammar in cookie clearing message (by [@Sushisource](https://github.com/Sushisource): [#2006](https://github.com/mbnuqw/sidebery/issues/2006))
+- Corrections in Polish (by [@MStankiewiczOfficial](https://github.com/MStankiewiczOfficial): [#2017](https://github.com/mbnuqw/sidebery/issues/2017))  
+
+
+## 5.3.2 - 2025.02.03
+
+### Fixed
+
+- Notifications: hide notifications while dragging items
+- Skip favicon resize if it is a SVG containing a CSS media query (by [@capi1O](https://github.com/capi1O): [#1987](https://github.com/mbnuqw/sidebery/issues/1987)) (resolves [#1937](https://github.com/mbnuqw/sidebery/issues/1937))  
+- Tabs: check if tabs are locked by sidebery before retrieving them (on init)
+- Sidebar/bottom-bar: increase height of dnd-layer to window edge
+- Drag and drop: prevent dropping items on themselves  
+- Windows: lock tabs init on early steps of createWithTabs ([#1910](https://github.com/mbnuqw/sidebery/issues/1910))  
+  This should prevent some cases of losing tabs structure on opening
+  window by sidebery e.g. opening snapshot window or moving tabs to new window
+- Search: minimum search query length in CJK should be 1. (by [@llc0930](https://github.com/llc0930): [#1985](https://github.com/mbnuqw/sidebery/issues/1985))  
+  When the query string length is 1, check whether it is a CJK character.
+- Keybindings: open all selected bookmarks (resolves [#1980](https://github.com/mbnuqw/sidebery/issues/1980))  
+- Keybindings: expand selection range in bookmark sub-panel too
+- Bookmarks: preserve customColor on opening bookmarks
+- Drag and drop: insert new tab panel after the last tab/bkm panel
+- Drag and drop: dropping tabs on unloaded bookmarks [sub-]panel
+- Drag and drop: increase delay before resetting dropEventConsumed flag  
+  This should decrease count of false-positive moving tabs to the
+  new window, (when browser is too busy and time between drop and dragend
+  events is more than 1500ms).
+- Tabs: do not allow moving all tabs of window to the new one
+- Drag and drop: increase min drag and drop duration before opening new window ([#1947](https://github.com/mbnuqw/sidebery/issues/1947))  
+  this should fix/reduce cases of false positive opening of a new window
+  when sidebery doesn't get the ondrop event despite the cursor was over
+  sidebar
+- Drag and drop: increase deadline for requesting drop statuses from other sidebars
+
+### Localization
+
+- de: typos, fixes, new features (by [@ChilledMoth](https://github.com/ChilledMoth): [#1981](https://github.com/mbnuqw/sidebery/issues/1981))
+
+
+## 5.3.1 - 2025.01.22
+
+### Fixed
+
+- Drag and Drop: correctly handle dragging bookmarks in bookmarks sub-panel
+- OnTabRemoved: incorrect recalc of visibility of the child tabs
+- Internal pages initialization (resolves [#1975](https://github.com/mbnuqw/sidebery/issues/1975))  
+- Handling connections between different parts of addon
+- Increase deadlines for reconnection and resending msgs ([#1973](https://github.com/mbnuqw/sidebery/issues/1973))  
+- Setup-page styles: use system-ui font-family  
+- Snapshots viewer styles: decrease tabs height
+
+### Localization
+
+- zh: updated translation (by [@llc0930](https://github.com/llc0930): [#1972](https://github.com/mbnuqw/sidebery/issues/1972))
+
+
+## 5.3.0 - 2025.01.20
+
 ### Added
 
+- Keybindings: select up/down: "Cyclically" sub-option
+- Show visual feedback after middle clicking on elements (bookmarks, history, recently closed tabs)
+- Keybinding to open sync popup
+- Keybinding to open bookmarks sub-panel (if available)
+- Keybindings: select bookmarks in sub-panel too
+- Keybinding to edit title of selected/active tab (resolves [#966](https://github.com/mbnuqw/sidebery/issues/966)) (resolves [#1848](https://github.com/mbnuqw/sidebery/issues/1848)) (resolves [#1845](https://github.com/mbnuqw/sidebery/issues/1845))  
+- Keybindings: switch to previously active panel
+- Keybindings to copy url/title of selected tab/bookmarks/active tab
+- Keybinding to open config popup of selected/active panel
+- Panel config in popup-window with basic keyboard navigation
+- History: load more in search mode
+- Tab preview: options to set max count of title/url lines (resolves [#1597](https://github.com/mbnuqw/sidebery/issues/1597))  
+- Options for middle click on pinned tab; default: unload (by [@emvaized](https://github.com/emvaized): [#1911](https://github.com/mbnuqw/sidebery/issues/1911))  
+- Option to skip unloaded tabs on tab flip
+- Sync via Google Drive (experimental)  
+  - Sync tabs (basic impl/experimental) [1372](https://github.com/mbnuqw/sidebery/issues/1372)
+- Unload or close action for tabMiddleClick (by [@JarKz](https://github.com/JarKz): [#1697](https://github.com/mbnuqw/sidebery/issues/1697))
 - Tabs: make discarded tab opacity editable (by [@valadaptive](https://github.com/valadaptive): [#1553](https://github.com/mbnuqw/sidebery/issues/1553))
-- Hungarian translation (by [@cr04ch](https://github.com/cr04ch): [#1531](https://github.com/mbnuqw/sidebery/issues/1531))  
 - Sidebar: close site config popup with ESC ([#491](https://github.com/mbnuqw/sidebery/issues/491))  
 - SetupPage: sub-sections of tabs and mouse settings in navigation
 - Keybindings: a note for menu shortcut ([#1159](https://github.com/mbnuqw/sidebery/issues/1159))  
@@ -13,16 +97,86 @@
 
 ### Fixed
 
+- Snapshots: normalize urls; utils.normalizeUrl: handle 'blob:' url ([#1942](https://github.com/mbnuqw/sidebery/issues/1942))  
+- Windows.createWithTabs: handle errors of browser.tabs.create() ([#1942](https://github.com/mbnuqw/sidebery/issues/1942))  
+- Tabs loading: increase count/freq of retry, ignore the tabs lock on the last retry
+- Tabs/move: preserve panel if dst.panelId is not set
+- Favicons: getting placeholder for internal pages of a dif profile
+- Setup-page: incomplete removing of nav element
+- Setup page/nav and contianers settings: more compact layout of cards
+- Tab preview: show preview popup for active and unloaded tabs too
+- Default tab context menu: first sort the tree itself (by [@llc0930](https://github.com/llc0930): [#1961](https://github.com/mbnuqw/sidebery/issues/1961))
+- Search: should also search for custom titles for tabs (by [@llc0930](https://github.com/llc0930): [#1960](https://github.com/mbnuqw/sidebery/issues/1960))
+- Setup-page: rm title/sub-title shadows
+- Notifications: set max width
+- Dnd: place new panel after the last one on dropping tabs to the Add Tab Panel btn
+- Export/import: more granular backup: separated "settings" field to "settings", "panels and nav" and "menu"
+- Importing data  
+  - race condition on importing containers and settings
+  - show error messages
+  - preserve old tabs panels
+- Menu editor: reload menu config on opening
+- Importing keybindings: handle defaults and conflicts
+- Keybindings: selecting panel in inlined nav-bar: show drop-down popup with not visible panels
+- Url-placeholder-page: make copy button focusable
+- Keybindings: activate selected bookmark: check if creation of a new tab is needed
+- Snapshots: preserve folded tabs state
+- Prevent wrong tab activation after fast closing with ctrl+w
+- Dnd: preserve folded state on dragging tabs outside the window
+- Dnd: preserve customTitle/Color on dragging tabs outside the window
+- Can't reopen containered tab in a new private window
+- Preserve custom color/title on auto-reopening tab in dif container
+- Trying to detect the manual session restore [#1368](https://github.com/mbnuqw/sidebery/issues/1368)
+- Ipc: handling different connection states; reconnection logic
+- No default context menu
+- Dnd tab with ctrl: container is not preserved
+- Docs: wiki: dynamic native tabs snippet (resolves [#1889](https://github.com/mbnuqw/sidebery/issues/1889))  
+- History: search: flickering UI, wrong selection, loadMore with kb
+- History: onBottomScroll sometimes doesn't trigger loadMore
+- Correctly update media state of panel after closing multiple tabs
+- Correctly update paused state of tab after url change
+- History item: block click if selection is set in search mode
+- Tab preview: reset internal state on turn on/off the setting
+- Use url from title as fallback on reopening tab with NewTabButton
+- Recalc "update" badge of panels after tabs moving
+- Added a check for markWindow setting before updating window title when sidebar disconnects (by [@jackordman](https://github.com/jackordman): [#1835](https://github.com/mbnuqw/sidebery/issues/1835))
+- Webext.run for zen-browser (by [@shanto](https://github.com/shanto): [#1813](https://github.com/mbnuqw/sidebery/issues/1813))  
+- Use workaround for 1660564 only in sidebar instance  
+  See https://bugzilla.mozilla.org/show_bug.cgi?id=1660564
+- Auto-switching tab panel on drag start
+- Bookmarks: wrong dst panel on opening bookmarks in container
+- Keybindings: wrong first selected tab in the panel without active tab
+- Previews: no fallback colors for 'in page' preview (fixes [#1708](https://github.com/mbnuqw/sidebery/issues/1708))  
+- Switching tabs with mousewheel with threshold is broken in scrollable panel  
+- Setup-page: keybindings: button alignment (by [@ChilledMoth](https://github.com/ChilledMoth): [#1772](https://github.com/mbnuqw/sidebery/issues/1772))
+- Tabs: restoring tree state from session data in some failure cases  
+  This and 05aedbb1, d21f8160, 5979d7a5, a2c6a59e, c83df0bd, 0d585f06 should
+  fix or at least decrease probability of problems related with broken tabs
+  structure on init (like [#1507](https://github.com/mbnuqw/sidebery/issues/1507), [#262](https://github.com/mbnuqw/sidebery/issues/262), [#267](https://github.com/mbnuqw/sidebery/issues/267), and so on...)
+- Save tab data after auto-moving parent tab to different panel
+- Save tab data after auto-reopening parent tab in different container
+- Save tab data after moving it to different window
+- Try to preserve tree structure of detached tabs
+- Correctly update tree structure and save it after detaching tabs
+- Save tabs data after their parent was reopened
+- Cache tabs data after pin/unpin
+- Tab context menu: make "clear cookies" option opt-in (resolves [#1336](https://github.com/mbnuqw/sidebery/issues/1336))  
+- Setup-page: wording (resolves [#1343](https://github.com/mbnuqw/sidebery/issues/1343))  
+  - use generalized term "scroll" over "mouse wheel"
+  - use more specific term "vertical scroll" over "scroll wheel" for tabs switching
+- Wrong range selection of bookmarks with the same start/end node
+- Broken tab state after range selection
+- Kb: start range selection from active tab if possible (resolves [#1421](https://github.com/mbnuqw/sidebery/issues/1421))  
+- Recently Closed Tabs: show full tooltip
+- History: copying title/url of filtered items
 - Dnd: incorrect checking of consumed drop event in other sidebars ([#1554](https://github.com/mbnuqw/sidebery/issues/1554))  
 - Tab: audio badge: correctly handle click target ([#1283](https://github.com/mbnuqw/sidebery/issues/1283))  
 - Bottom-bar: increase click area to the bottom edge
 - onTabUpdated: reset `updated` flag on discard
 - onTabUpdated: don't set `updated` flag for discarded tab
 - Site config popup: switch the panel after moving tab if configured
-- Setup-page: help: repo link URL (by [@llc0930](https://github.com/llc0930): [#1580](https://github.com/mbnuqw/sidebery/issues/1580))
 - Site config popup: changes are not saved correctly
 - Auto move rule: set default value of 'top lvl only' to false
-- Translation fixes (by [@llc0930](https://github.com/llc0930): [#1578](https://github.com/mbnuqw/sidebery/issues/1578))  
 - Broken tree state after drag and drop to another window in some cases
 - Discarded tabs reload on moving the last tabs to another window
 - The last tab activation on moving tabs to the new window
@@ -30,13 +184,32 @@
 - Horizontal scroll-bar appeared in sub-menu in the plain theme
 - Discard page even if it's trying to prevent closing (only with WebData permissions)
 - Context menu: too small margin-left of the label without icon
-- L10n zh_TW correction (by [@llc0930](https://github.com/llc0930): [#1537](https://github.com/mbnuqw/sidebery/issues/1537))
 - Default settings: nativeHighlight: true ([#748](https://github.com/mbnuqw/sidebery/issues/748))  
 - Broken active group page on restoring window from history menu
 - Context menu positioned under the cursor in some cases ([#522](https://github.com/mbnuqw/sidebery/issues/522))  
 - Tabs: reset unread mark after disabling the setting
 - Default settings: tabsSecondClickActPrev: false ([#1521](https://github.com/mbnuqw/sidebery/issues/1521))  
 - Recalc native tabs visibility when a globally pinned tab is active ([#700](https://github.com/mbnuqw/sidebery/issues/700))
+
+### Localization
+
+- ja, zh: updated translation (by [@llc0930](https://github.com/llc0930): [#1969](https://github.com/mbnuqw/sidebery/issues/1969))
+- zh: updated translation, hu: ru: corrected (by [@llc0930](https://github.com/llc0930): [#1966](https://github.com/mbnuqw/sidebery/issues/1966))
+- zh: updated translation (by [@llc0930](https://github.com/llc0930): [#1959](https://github.com/mbnuqw/sidebery/issues/1959))
+- ja, zh (by [@llc0930](https://github.com/llc0930): [#1940](https://github.com/mbnuqw/sidebery/issues/1940))  
+- en, ru: tab panel menu: rm the word "all" to avoid confusion between panel tabs and all tabs in general
+- Updated translation (by [@llc0930](https://github.com/llc0930): [#1913](https://github.com/mbnuqw/sidebery/issues/1913))  
+- Setup-page: help: repo link URL (by [@llc0930](https://github.com/llc0930): [#1580](https://github.com/mbnuqw/sidebery/issues/1580))
+- Fix translation duplications and errors (by [@llc0930](https://github.com/llc0930): [#1766](https://github.com/mbnuqw/sidebery/issues/1766))
+- Setup-page: translation wording adjustment (by [@llc0930](https://github.com/llc0930): [#1595](https://github.com/mbnuqw/sidebery/issues/1595))
+- Translation fixes (by [@llc0930](https://github.com/llc0930): [#1578](https://github.com/mbnuqw/sidebery/issues/1578))  
+- L10n zh_TW correction (by [@llc0930](https://github.com/llc0930): [#1537](https://github.com/mbnuqw/sidebery/issues/1537))
+- Updated German translation (by [@ChilledMoth](https://github.com/ChilledMoth): [#1767](https://github.com/mbnuqw/sidebery/issues/1767))  
+- Updated German translation (by [@ChilledMoth](https://github.com/ChilledMoth): [#1679](https://github.com/mbnuqw/sidebery/issues/1679))  
+- Polish translation (by [@docentYT](https://github.com/docentYT): [#1661](https://github.com/mbnuqw/sidebery/issues/1661))  
+- Japanese translation (by [@mikan-megane](https://github.com/mikan-megane): [#1642](https://github.com/mbnuqw/sidebery/issues/1642))  
+- Hungarian translation (by [@cr04ch](https://github.com/cr04ch): [#1531](https://github.com/mbnuqw/sidebery/issues/1531))  
+
 
 ## 5.2.0 - 2024.03.07
 
