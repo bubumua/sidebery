@@ -139,6 +139,7 @@ export const PANEL_ICON_OPTS = [
   { value: 'toolbox', icon: '#toolbox' },
   { value: 'tools', icon: '#tools' },
   { value: 'youtube', icon: '#youtube' },
+  { value: 'wifi', icon: '#wifi' },
 ]
 export const COLOR_OPTS = [
   { value: 'toolbar', color: 'toolbar' },
